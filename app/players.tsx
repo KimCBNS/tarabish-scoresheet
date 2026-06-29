@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
 import { Colors } from '@/constants/theme';
+import { usePlayers } from '@/context/PlayersContext';
+import { KeyboardSafeScrollView } from '@/components/KeyboardSafeScrollView';
 
 export default function PlayersScreen() {
+  const { setPlayers } = usePlayers();
   const [names, setNames] = useState<string[]>(['', '', '', '']);
 
   function updateName(index: number, value: string) {
@@ -24,57 +19,46 @@ export default function PlayersScreen() {
 
   function handleNext() {
     const filled = names.map(n => n.trim()).filter(n => n.length > 0);
-    console.log('Players:', filled);
+    setPlayers(filled);
+    router.push('/partners');
   }
 
+  const footer = (
+    <View style={styles.footer}>
+      <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.8}>
+        <Text style={styles.nextButtonText}>Next</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Who is playing?</Text>
+    <KeyboardSafeScrollView contentContainerStyle={styles.content} footer={footer}>
+      <Text style={styles.title}>Who is playing?</Text>
 
-        {names.map((name, i) => (
-          <TextInput
-            key={i}
-            style={styles.input}
-            value={name}
-            onChangeText={v => updateName(i, v)}
-            placeholder="First name only"
-            placeholderTextColor={Colors.grey}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-        ))}
+      {names.map((name, i) => (
+        <TextInput
+          key={i}
+          style={styles.input}
+          value={name}
+          onChangeText={v => updateName(i, v)}
+          placeholder="First name only"
+          placeholderTextColor={Colors.grey}
+          autoCapitalize="words"
+          returnKeyType="next"
+        />
+      ))}
 
-        <TouchableOpacity style={styles.addButton} onPress={addPlayer}>
-          <Text style={styles.addButtonText}>+ Add another</Text>
-        </TouchableOpacity>
-
-        <View style={styles.spacer} />
-
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.8}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <TouchableOpacity style={styles.addButton} onPress={addPlayer}>
+        <Text style={styles.addButtonText}>+ Add another</Text>
+      </TouchableOpacity>
+    </KeyboardSafeScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: Colors.cream,
-  },
   content: {
     padding: 24,
-    paddingTop: 64,
+    paddingTop: 24,
     paddingBottom: 40,
   },
   title: {
@@ -101,8 +85,9 @@ const styles = StyleSheet.create({
     color: Colors.green,
     fontWeight: '600',
   },
-  spacer: {
-    height: 48,
+  footer: {
+    padding: 24,
+    paddingBottom: 40,
   },
   nextButton: {
     backgroundColor: Colors.green,
