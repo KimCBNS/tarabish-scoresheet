@@ -128,7 +128,7 @@ export default function SeatingScreen() {
       themTeamId: themTeam?.name ?? '',
     });
 
-    router.push('/rules');
+    router.push('/deal');
   }
 
   function handleStartOver() {
