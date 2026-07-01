@@ -1,30 +1,21 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { usePlayers } from '@/context/PlayersContext';
-
-type Team = {
-  name: string;
-  members: string[];
-};
+import { usePlayers, type Team } from '@/context/PlayersContext';
 
 function buildInitialTeams(count: number): Team[] {
-  if (count === 4) {
-    return [
-      { name: 'US', members: [] },
-      { name: 'THEM', members: [] },
-    ];
-  }
-  // For 5+ players: one team per 2 players, rounding up
+  // Always Team A / Team B / etc. — US/THEM labels are assigned later in Screen 4
+  // once the scorekeeper is known.
   const teamCount = Math.ceil(count / 2);
   return Array.from({ length: teamCount }, (_, i) => ({
-    name: `Team ${String.fromCharCode(65 + i)}`, // A, B, C...
+    name: `Team ${String.fromCharCode(65 + i)}`, // A, B, C…
     members: [],
   }));
 }
 
 export default function PartnersScreen() {
-  const { players } = usePlayers();
+  const { players, setTeams: saveTeams } = usePlayers();
   const [teams, setTeams] = useState<Team[]>(() => buildInitialTeams(players.length));
   const [unassigned, setUnassigned] = useState<string[]>(players);
 
@@ -40,8 +31,7 @@ export default function PartnersScreen() {
     );
     const newUnassigned = unassigned.filter(p => p !== playerName);
 
-    // 4-player auto-fill: once US (index 0) reaches 2, put remaining unassigned into THEM —
-    // but only when THEM is still empty, so a re-assignment after removal doesn't stomp existing members.
+    // 4-player auto-fill: once Team A has 2 members, the remaining two go to Team B
     if (is4Player && targetIndex === 0 && newTeams[0].members.length === 2 && newUnassigned.length > 0 && newTeams[1].members.length === 0) {
       newTeams[1] = { ...newTeams[1], members: [...newUnassigned] };
       setUnassigned([]);
@@ -61,8 +51,8 @@ export default function PartnersScreen() {
   }
 
   function handleNext() {
-    const result = teams.map(t => ({ team: t.name, players: t.members }));
-    console.log('Teams:', JSON.stringify(result, null, 2));
+    saveTeams(teams);
+    router.push('/seating');
   }
 
   return (
