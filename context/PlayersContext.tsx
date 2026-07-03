@@ -1,22 +1,36 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 export type Team = {
-  name: string;    // "Team A", "Team B", etc.
-  members: string[]; // player names
+  name: string;
+  members: string[];
 };
 
 export type SeatingSetup = {
-  scorekeeperId: string;  // player who tapped their own name in Screen 4
+  scorekeeperId: string;
   seatOrder: string[];    // [bottom, left, top, right] — player names in fixed seat order
-  dealerId: string | null; // set by the cut-for-deal screen; null until then
-  usTeamId: string;       // name of the team the scorekeeper belongs to ("Team A" or "Team B")
-  themTeamId: string;     // the other team's name
+  dealerId: string | null;
+  usTeamId: string;
+  themTeamId: string;
 };
 
 export type HouseRules = {
-  forceDeal: boolean;           // if everyone passes, dealer must call trump
-  halfBaitIsWholeBait: boolean; // calling team goes bait → full pool to other team
-  noTrumpAllowed: boolean;      // players may call no trump (pool drops to 130 pts)
+  forceDeal: boolean;
+  halfBaitIsWholeBait: boolean;
+  noTrumpAllowed: boolean;
+};
+
+// Tags that can be attached to a hand. run20/run50 may appear twice (one per run declared).
+export type HandTag = 'run20' | 'run50' | 'bella' | 'bait' | 'noTrump';
+
+export type Hand = {
+  id: string;
+  dealerId: string;         // player name of the dealer for this hand
+  passed: boolean;
+  usScore: number;
+  themScore: number;
+  tags: HandTag[];
+  countedTeamId: string;   // which team counted up — drives tag placement in the ledger display
+  baitTeamId: string | null;
 };
 
 const DEFAULT_HOUSE_RULES: HouseRules = {
@@ -32,9 +46,15 @@ type PlayersContextType = {
   setTeams: (teams: Team[]) => void;
   seating: SeatingSetup | null;
   setSeating: (seating: SeatingSetup) => void;
-  setDealerId: (id: string) => void; // patches seating.dealerId without touching other fields
+  setDealerId: (id: string) => void;
   houseRules: HouseRules;
   setHouseRules: (rules: HouseRules) => void;
+  // ── Match state ──────────────────────────────────────────────────────
+  hands: Hand[];
+  addHand: (hand: Omit<Hand, 'id'>) => void;
+  // currentDealerIndex is an index into seating.seatOrder, wrapping clockwise.
+  currentDealerIndex: number;
+  advanceDealer: () => void;
 };
 
 const PlayersContext = createContext<PlayersContextType | null>(null);
@@ -44,13 +64,32 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [seating, setSeatingState] = useState<SeatingSetup | null>(null);
   const [houseRules, setHouseRules] = useState<HouseRules>(DEFAULT_HOUSE_RULES);
+  const [hands, setHands] = useState<Hand[]>([]);
+  const [currentDealerIndex, setCurrentDealerIndex] = useState(0);
 
   function setSeating(s: SeatingSetup) {
     setSeatingState(s);
   }
 
+  // Patches dealerId AND seeds currentDealerIndex to that player's seat position,
+  // so dealer rotation starts from the correct seat after the cut for deal.
   function setDealerId(id: string) {
-    setSeatingState(prev => (prev ? { ...prev, dealerId: id } : prev));
+    setSeatingState(prev => {
+      if (!prev) return prev;
+      const idx = prev.seatOrder.indexOf(id);
+      if (idx !== -1) setCurrentDealerIndex(idx);
+      return { ...prev, dealerId: id };
+    });
+  }
+
+  function addHand(hand: Omit<Hand, 'id'>) {
+    setHands(prev => [...prev, { ...hand, id: Date.now().toString() }]);
+  }
+
+  // Moves deal one seat clockwise. Called after every hand (dealt or passed).
+  function advanceDealer() {
+    const len = seating?.seatOrder.length ?? 4;
+    setCurrentDealerIndex(prev => (prev + 1) % len);
   }
 
   return (
@@ -61,6 +100,8 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
         seating, setSeating,
         setDealerId,
         houseRules, setHouseRules,
+        hands, addHand,
+        currentDealerIndex, advanceDealer,
       }}>
       {children}
     </PlayersContext.Provider>
