@@ -11,7 +11,7 @@ export default function TitleScreen() {
         style={styles.button}
         onPress={() => router.push('/players')}
         activeOpacity={0.8}>
-        <Text style={styles.buttonText}>Start Tonight's Game</Text>
+        <Text style={styles.buttonText}>Ready to Play</Text>
       </TouchableOpacity>
     </View>
   );

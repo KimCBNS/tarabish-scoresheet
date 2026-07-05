@@ -448,7 +448,7 @@ function ScratchMarginEntry({
                 value={countedScoreStr}
                 onChangeText={handleScoreChange}
                 keyboardType="number-pad"
-                placeholder="0"
+                placeholder="enter score"
                 placeholderTextColor={Colors.grey}
                 returnKeyType="done"
               />
@@ -592,8 +592,7 @@ export default function LedgerScreen() {
       {/* ── Zone 1: Status strip (pinned) ──────────────────────────────── */}
       <View style={styles.statusStrip}>
         <Text style={styles.statusText}>
-          Whose deal is it?{'  →  '}
-          <Text style={styles.statusDealer}>{currentDealerName || '—'}</Text>
+          It's <Text style={styles.statusDealer}>{currentDealerName || '—'}</Text>'s deal
         </Text>
         {!matchOver && (
           <TouchableOpacity activeOpacity={0.7} onPress={handlePassDeal}>
@@ -730,7 +729,7 @@ export default function LedgerScreen() {
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.7}>
-            ★ {matchWinner === 'us' ? `US WINS — ${usLabel}` : `THEM WINS — ${themLabel}`} ★
+            ★ {matchWinner === 'us' ? usLabel : themLabel} win! ★
           </Text>
           <TouchableOpacity style={styles.nextMatchBtn} activeOpacity={0.8}>
             <Text style={styles.nextMatchBtnText}>Start Next Match</Text>
