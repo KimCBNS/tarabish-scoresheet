@@ -500,9 +500,10 @@ function ScratchMarginEntry({
 export default function LedgerScreen() {
   const [fontsLoaded] = useFonts({ Caveat_400Regular, Caveat_700Bold });
   const {
-    hands, addHand,
+    hands, addHand, undoLastHand,
     seating, teams, houseRules,
     currentDealerIndex, advanceDealer,
+    matchWinner,
   } = usePlayers();
 
   const [marginOpen, setMarginOpen] = useState(false);
@@ -519,13 +520,11 @@ export default function LedgerScreen() {
   const currentDealerName = seatOrder[currentDealerIndex] ?? '';
 
   // ── Derive display data ───────────────────────────────────────────────────
-  const { entries: displayHands, usTotal, themTotal } = buildDisplayHands(hands, usTeamId);
+  const { entries: displayHands } = buildDisplayHands(hands, usTeamId);
 
   // ── Win detection ─────────────────────────────────────────────────────────
-  const matchWinner: 'us' | 'them' | null =
-    usTotal >= 500 || themTotal >= 500
-      ? (usTotal >= themTotal ? 'us' : 'them')
-      : null;
+  // matchWinner lives in PlayersContext (set by addHand/undoLastHand) so it
+  // stays correct if the winning hand is later undone.
   const matchOver = matchWinner !== null;
 
   // ── Margin animation helpers ──────────────────────────────────────────────
@@ -687,7 +686,11 @@ export default function LedgerScreen() {
       {/* Change 2: "+ Add Hand" removed from here — it lives in the scratch margin */}
       <SafeAreaView style={styles.actionBar} edges={['bottom']}>
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.undoBtn} disabled activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.undoBtn, hands.length === 0 && styles.undoBtnDisabled]}
+            onPress={undoLastHand}
+            disabled={hands.length === 0}
+            activeOpacity={0.8}>
             <Text style={styles.undoBtnText}>Undo</Text>
           </TouchableOpacity>
         </View>
@@ -837,7 +840,7 @@ const styles = StyleSheet.create({
 
   // ── Winner banner ────────────────────────────────────────────────────
   winnerBanner: {
-    backgroundColor: Colors.cream,
+    backgroundColor: 'rgba(184, 144, 46, 0.08)',
     borderTopWidth: 1.5,
     borderTopColor: Colors.gold,
     borderBottomWidth: 1.5,
@@ -847,7 +850,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   winnerText: {
-    fontSize: 14, fontWeight: '700', color: Colors.gold,
+    fontFamily: 'Caveat_700Bold', fontSize: 18, color: Colors.gold,
     letterSpacing: 0.8, marginBottom: 8, textAlign: 'center',
   },
   nextMatchBtn: {
@@ -873,8 +876,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 6,
     alignItems: 'center',
-    opacity: 0.45,
   },
+  undoBtnDisabled: { opacity: 0.45 },
   undoBtnText: { color: Colors.grey, fontSize: 16, fontWeight: '600' },
   endMatchLink: { alignItems: 'center', paddingVertical: 4 },
   endMatchText: { fontSize: 12, color: Colors.grey },

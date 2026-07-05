@@ -52,9 +52,11 @@ type PlayersContextType = {
   // ── Match state ──────────────────────────────────────────────────────
   hands: Hand[];
   addHand: (hand: Omit<Hand, 'id'>) => void;
+  undoLastHand: () => void;
   // currentDealerIndex is an index into seating.seatOrder, wrapping clockwise.
   currentDealerIndex: number;
   advanceDealer: () => void;
+  matchWinner: 'us' | 'them' | null;
 };
 
 const PlayersContext = createContext<PlayersContextType | null>(null);
@@ -66,6 +68,7 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
   const [houseRules, setHouseRules] = useState<HouseRules>(DEFAULT_HOUSE_RULES);
   const [hands, setHands] = useState<Hand[]>([]);
   const [currentDealerIndex, setCurrentDealerIndex] = useState(0);
+  const [matchWinner, setMatchWinner] = useState<'us' | 'them' | null>(null);
 
   function setSeating(s: SeatingSetup) {
     setSeatingState(s);
@@ -82,8 +85,36 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Sums usScore/themScore across a hands array and, if either side has
+  // reached 500, returns the winner ('us' by convention on an exact tie).
+  function computeWinner(list: Hand[]): 'us' | 'them' | null {
+    let usTotal = 0;
+    let themTotal = 0;
+    for (const h of list) {
+      usTotal += h.usScore;
+      themTotal += h.themScore;
+    }
+    if (usTotal < 500 && themTotal < 500) return null;
+    return themTotal > usTotal ? 'them' : 'us';
+  }
+
   function addHand(hand: Omit<Hand, 'id'>) {
-    setHands(prev => [...prev, { ...hand, id: Date.now().toString() }]);
+    setHands(prev => {
+      const next = [...prev, { ...hand, id: Date.now().toString() }];
+      setMatchWinner(computeWinner(next));
+      return next;
+    });
+  }
+
+  // Removes the most recently added hand (dealt or passed) and reverses the
+  // dealer advance that hand caused. No-op when there's nothing to undo.
+  function undoLastHand() {
+    if (hands.length === 0) return;
+    const next = hands.slice(0, -1);
+    setHands(next);
+    setMatchWinner(computeWinner(next));
+    const len = seating?.seatOrder.length ?? 4;
+    setCurrentDealerIndex(prev => (prev - 1 + len) % len);
   }
 
   // Moves deal one seat clockwise. Called after every hand (dealt or passed).
@@ -100,8 +131,9 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
         seating, setSeating,
         setDealerId,
         houseRules, setHouseRules,
-        hands, addHand,
+        hands, addHand, undoLastHand,
         currentDealerIndex, advanceDealer,
+        matchWinner,
       }}>
       {children}
     </PlayersContext.Provider>
