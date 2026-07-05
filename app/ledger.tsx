@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { useFonts, Caveat_400Regular, Caveat_700Bold } from '@expo-google-fonts/caveat';
+import { useEffect, useRef, useState } from 'react';
+import { useFonts, ArchitectsDaughter_400Regular } from '@expo-google-fonts/architects-daughter';
 import { Colors } from '@/constants/theme';
 import { LinedPaper } from '@/components/LinedPaper';
 import { usePlayers, type Hand, type HandTag } from '@/context/PlayersContext';
@@ -159,14 +159,14 @@ function CheckRow({
 // Four columns: dealer block | US score | THEM score | tag chips.
 // Tags are embedded as the 4th column so they're vertically co-located with their
 // row by construction — no parallel height-matching required.
-function HandRow({ hand }: { hand: HandEntry }) {
+function HandRow({ hand, compact }: { hand: HandEntry; compact: boolean }) {
   if (hand.passed) {
     return (
       <View style={styles.passedRow}>
-        <View style={styles.dealerCol}><DealerBlock dealer={hand.dealer} passed /></View>
+        <View style={[styles.dealerCol, compact && styles.dealerColHidden]}><DealerBlock dealer={hand.dealer} passed /></View>
         <View style={styles.scoreCell}><Text style={styles.passedDash}>—</Text></View>
         <View style={styles.scoreCell}><Text style={styles.passedDash}>—</Text></View>
-        <View style={styles.handTagCol} />
+        <View style={[styles.handTagCol, compact && styles.handTagColHidden]} />
       </View>
     );
   }
@@ -175,14 +175,14 @@ function HandRow({ hand }: { hand: HandEntry }) {
     <View>
       {/* Raw score row — tags stack vertically in the 4th column, top-aligned */}
       <View style={styles.handRow}>
-        <View style={styles.dealerCol}><DealerBlock dealer={hand.dealer} passed={false} /></View>
+        <View style={[styles.dealerCol, compact && styles.dealerColHidden]}><DealerBlock dealer={hand.dealer} passed={false} /></View>
         <View style={styles.scoreCell}>
           <Text style={styles.scoreNumber}>{hand.us!.score}</Text>
         </View>
         <View style={styles.scoreCell}>
           <Text style={styles.scoreNumber}>{hand.them!.score}</Text>
         </View>
-        <View style={styles.handTagCol}>
+        <View style={[styles.handTagCol, compact && styles.handTagColHidden]}>
           {hand.allTags.map((label, i) => <Tag key={i} label={label} />)}
         </View>
       </View>
@@ -192,7 +192,7 @@ function HandRow({ hand }: { hand: HandEntry }) {
         <>
           <View style={styles.additionLineWrap}><View style={styles.additionLine} /></View>
           <View style={styles.handRow}>
-            <View style={styles.dealerCol} />
+            <View style={[styles.dealerCol, compact && styles.dealerColHidden]} />
             <View style={styles.scoreCell}>
               <Text style={styles.totalNumber}>{hand.usTotal}</Text>
             </View>
@@ -200,7 +200,7 @@ function HandRow({ hand }: { hand: HandEntry }) {
               <Text style={styles.totalNumber}>{hand.themTotal}</Text>
             </View>
             {/* Empty spacer keeps score cells the same width as the raw score row above */}
-            <View style={styles.handTagCol} />
+            <View style={[styles.handTagCol, compact && styles.handTagColHidden]} />
           </View>
         </>
       )}
@@ -498,7 +498,7 @@ function ScratchMarginEntry({
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function LedgerScreen() {
-  const [fontsLoaded] = useFonts({ Caveat_400Regular, Caveat_700Bold });
+  const [fontsLoaded] = useFonts({ ArchitectsDaughter_400Regular });
   const {
     hands, addHand, undoLastHand,
     seating, teams, houseRules,
@@ -507,6 +507,14 @@ export default function LedgerScreen() {
   } = usePlayers();
 
   const [marginOpen, setMarginOpen] = useState(false);
+  const [confirmingUndo, setConfirmingUndo] = useState(false);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    };
+  }, []);
 
   // ── Resolve team identities ───────────────────────────────────────────────
   const usTeamId = seating?.usTeamId ?? '';
@@ -542,6 +550,23 @@ export default function LedgerScreen() {
     addHand(hand);
     advanceDealer();
     closeMargin();
+  }
+
+  function handleUndoPress() {
+    setConfirmingUndo(true);
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    undoTimeoutRef.current = setTimeout(() => setConfirmingUndo(false), 4000);
+  }
+
+  function handleUndoYes() {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setConfirmingUndo(false);
+    undoLastHand();
+  }
+
+  function handleUndoNo() {
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    setConfirmingUndo(false);
   }
 
   function handlePassDeal() {
@@ -592,7 +617,7 @@ export default function LedgerScreen() {
             <View style={[styles.scoreColumns, marginOpen && styles.scoreColumnsCompressed]}>
 
               <View style={styles.handRow}>
-                <View style={styles.dealerCol} />
+                <View style={[styles.dealerCol, marginOpen && styles.dealerColHidden]} />
                 <View style={styles.scoreCell}>
                   <Text style={styles.colHeader}>US</Text>
                   <Text style={styles.colSubHeader}>{usLabel}</Text>
@@ -602,7 +627,7 @@ export default function LedgerScreen() {
                   <Text style={styles.colSubHeader}>{themLabel}</Text>
                 </View>
                 {/* Spacer keeps header columns aligned with hand row columns */}
-                <View style={styles.handTagCol} />
+                <View style={[styles.handTagCol, marginOpen && styles.handTagColHidden]} />
               </View>
 
               <View style={styles.headerUnderline} />
@@ -614,7 +639,7 @@ export default function LedgerScreen() {
               )}
 
               {displayHands.map((hand, i) => (
-                <HandRow key={i} hand={hand} />
+                <HandRow key={i} hand={hand} compact={marginOpen} />
               ))}
             </View>
 
@@ -637,17 +662,44 @@ export default function LedgerScreen() {
                   onCancel={closeMargin}
                 />
               ) : (
-                // Collapsed state: tapping anywhere in the margin opens entry mode
-                <TouchableOpacity
-                  style={styles.marginCollapsed}
-                  onPress={!matchOver ? openMargin : undefined}
-                  activeOpacity={matchOver ? 1 : 0.7}>
-                  {!matchOver && (
-                    <View style={styles.marginAddHandLabel}>
-                      <Text style={styles.marginAddHandText}>+ Add Hand</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                // Collapsed state: tag history up top (future), + Add Hand / undo pinned to the bottom
+                <View style={styles.marginCollapsed}>
+                  <View />
+
+                  <View style={styles.marginBottomStack}>
+                    {!matchOver && (
+                      <TouchableOpacity
+                        style={styles.marginAddHandLabel}
+                        onPress={openMargin}
+                        activeOpacity={0.7}>
+                        <Text style={styles.marginAddHandText}>+ Add Hand</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {hands.length > 0 && (
+                      confirmingUndo ? (
+                        <View style={styles.undoAreaWrap}>
+                          <Text style={styles.undoConfirmQuestion}>Undo last hand?</Text>
+                          <View style={styles.undoConfirmActions}>
+                            <TouchableOpacity onPress={handleUndoYes} activeOpacity={0.7}>
+                              <Text style={styles.undoConfirmYes}>Yes</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleUndoNo} activeOpacity={0.7}>
+                              <Text style={styles.undoConfirmNo}>No</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.undoAreaWrap}
+                          onPress={handleUndoPress}
+                          activeOpacity={0.7}>
+                          <Text style={styles.undoLinkText}>↺ undo</Text>
+                        </TouchableOpacity>
+                      )
+                    )}
+                  </View>
+                </View>
               )}
             </View>
           </View>
@@ -673,7 +725,11 @@ export default function LedgerScreen() {
       {/* ── Winner banner (pinned above action bar) ─────────────────────── */}
       {matchOver && matchWinner && (
         <View style={styles.winnerBanner}>
-          <Text style={styles.winnerText}>
+          <Text
+            style={styles.winnerText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
             ★ {matchWinner === 'us' ? `US WINS — ${usLabel}` : `THEM WINS — ${themLabel}`} ★
           </Text>
           <TouchableOpacity style={styles.nextMatchBtn} activeOpacity={0.8}>
@@ -683,17 +739,8 @@ export default function LedgerScreen() {
       )}
 
       {/* ── Bottom action bar ────────────────────────────────────────────── */}
-      {/* Change 2: "+ Add Hand" removed from here — it lives in the scratch margin */}
+      {/* "+ Add Hand" and Undo both live in the scratch margin now */}
       <SafeAreaView style={styles.actionBar} edges={['bottom']}>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.undoBtn, hands.length === 0 && styles.undoBtnDisabled]}
-            onPress={undoLastHand}
-            disabled={hands.length === 0}
-            activeOpacity={0.8}>
-            <Text style={styles.undoBtnText}>Undo</Text>
-          </TouchableOpacity>
-        </View>
         <TouchableOpacity style={styles.endMatchLink} activeOpacity={0.7}>
           <Text style={styles.endMatchText}>End this match early</Text>
         </TouchableOpacity>
@@ -747,18 +794,20 @@ const styles = StyleSheet.create({
   passedDash: { fontSize: 14, color: Colors.grey, fontStyle: 'italic', opacity: 0.5 },
 
   dealerCol: { width: 56, paddingRight: 4, alignItems: 'center' },
+  // Collapses to nothing while the scratch margin entry form is open
+  dealerColHidden: { width: 0, paddingRight: 0, overflow: 'hidden' },
 
   dealerBlock: { width: 52, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 3, alignItems: 'center' },
   dealerBlockDealt: { borderWidth: 1.5, borderColor: 'rgba(61, 92, 69, 0.5)', backgroundColor: 'rgba(61, 92, 69, 0.06)' },
   dealerBlockPassed: { borderWidth: 1.5, borderColor: 'rgba(140, 140, 134, 0.4)', backgroundColor: 'rgba(140, 140, 134, 0.05)' },
-  dealerBlockName: { fontFamily: 'Caveat_400Regular', fontSize: 13, color: Colors.ink, textAlign: 'center' },
+  dealerBlockName: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 13, color: Colors.ink, textAlign: 'center' },
   dealerBlockStatus: { fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5 },
   dealerBlockStatusDealt: { color: Colors.green },
   dealerBlockStatusPassed: { color: Colors.grey },
 
   scoreCell: { flex: 1, alignItems: 'center' },
-  scoreNumber: { fontFamily: 'Caveat_400Regular', fontSize: 22, color: Colors.ink },
-  totalNumber: { fontFamily: 'Caveat_700Bold', fontSize: 26, color: Colors.ink },
+  scoreNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 19, color: Colors.ink },
+  totalNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 26, color: Colors.ink },
 
   colHeader: { fontSize: 11, fontWeight: '700', color: Colors.ink, letterSpacing: 1.5, textTransform: 'uppercase' },
   colSubHeader: { fontSize: 10, color: Colors.grey, marginTop: 1, textAlign: 'center' },
@@ -783,7 +832,7 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 9, color: Colors.gold, fontWeight: '600' },
 
   emptyState: { paddingTop: 20, paddingLeft: 56 + 8, paddingRight: 8 },
-  emptyStateText: { fontFamily: 'Caveat_400Regular', fontSize: 16, color: Colors.grey, fontStyle: 'italic' },
+  emptyStateText: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 14, color: Colors.grey, fontStyle: 'italic' },
 
   // ── Right margin ─────────────────────────────────────────────────────
   marginDivider: { width: 1, backgroundColor: 'rgba(180, 195, 210, 0.6)' },
@@ -793,14 +842,15 @@ const styles = StyleSheet.create({
   },
   scratchMarginOpen: { flex: 2 },
 
-  // Collapsed margin: fills the full height as a tap target
+  // Collapsed margin: tag history (future) up top, + Add Hand / undo pinned to the bottom
   marginCollapsed: {
     flex: 1,
     paddingTop: 8,
     paddingHorizontal: 4,
     paddingBottom: 8,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
+  marginBottomStack: { width: '100%' },
   marginAddHandLabel: {
     alignItems: 'center',
     paddingVertical: 6,
@@ -810,6 +860,20 @@ const styles = StyleSheet.create({
     color: Colors.green,
     fontWeight: '600',
   },
+
+  // "↺ undo" link and its inline confirmation — set well apart from
+  // "+ Add Hand" above so it isn't accidentally tapped.
+  undoAreaWrap: { marginTop: 24, alignItems: 'center' },
+  undoLinkText: { fontSize: 11, color: Colors.grey },
+  undoConfirmQuestion: {
+    fontSize: 11,
+    color: Colors.grey,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  undoConfirmActions: { flexDirection: 'row', gap: 14 },
+  undoConfirmYes: { fontSize: 11, color: Colors.gold, fontWeight: '600' },
+  undoConfirmNo: { fontSize: 11, color: Colors.grey, fontWeight: '600' },
 
   // Tag chip column — 4th cell in every hand row.
   // alignSelf: 'flex-start' pins chips to the top of the row instead of
@@ -821,6 +885,8 @@ const styles = StyleSheet.create({
     paddingLeft: 3,
     paddingTop: 2,
   },
+  // Collapses to nothing while the scratch margin entry form is open
+  handTagColHidden: { width: 0, paddingLeft: 0, overflow: 'hidden' },
 
   // ── Match history ────────────────────────────────────────────────────
   historySection: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
@@ -846,11 +912,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.5,
     borderBottomColor: Colors.gold,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
   winnerText: {
-    fontFamily: 'Caveat_700Bold', fontSize: 18, color: Colors.gold,
+    fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 18, color: Colors.gold,
     letterSpacing: 0.8, marginBottom: 8, textAlign: 'center',
   },
   nextMatchBtn: {
@@ -868,17 +934,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 4,
   },
-  actionButtons: { flexDirection: 'row', gap: 10, marginBottom: 8 },
-  undoBtn: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: Colors.grey,
-    paddingVertical: 14,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  undoBtnDisabled: { opacity: 0.45 },
-  undoBtnText: { color: Colors.grey, fontSize: 16, fontWeight: '600' },
   endMatchLink: { alignItems: 'center', paddingVertical: 4 },
   endMatchText: { fontSize: 12, color: Colors.grey },
 
@@ -930,7 +985,7 @@ const styles = StyleSheet.create({
   stepperBtn: { fontSize: 16, color: Colors.green, paddingHorizontal: 3, fontWeight: '700' },
   stepperBtnDisabled: { color: Colors.grey },
   stepperVal: {
-    fontFamily: 'Caveat_400Regular',
+    fontFamily: 'ArchitectsDaughter_400Regular',
     fontSize: 14,
     color: Colors.ink,
     minWidth: 14,
@@ -960,12 +1015,12 @@ const styles = StyleSheet.create({
   // Math equation display
   mathSection: { marginTop: 4, alignItems: 'flex-end' },
   mathLabel: { fontSize: 9, color: Colors.grey, marginBottom: 2, alignSelf: 'flex-start' },
-  mathPool: { fontFamily: 'Caveat_400Regular', fontSize: 18, color: Colors.grey },
+  mathPool: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 15, color: Colors.grey },
   mathInputRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   mathMinus: { fontSize: 18, color: Colors.ink },
   mathInput: {
-    fontFamily: 'Caveat_400Regular',
-    fontSize: 26,
+    fontFamily: 'ArchitectsDaughter_400Regular',
+    fontSize: 23,
     color: Colors.ink,
     minWidth: 46,
     textAlign: 'right',
@@ -978,7 +1033,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     transform: [{ rotate: '-0.3deg' }],
   },
-  mathOther: { fontFamily: 'Caveat_400Regular', fontSize: 22, color: Colors.ink },
+  mathOther: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 19, color: Colors.ink },
   mathPlaceholder: { fontSize: 10, color: Colors.grey, fontStyle: 'italic', marginTop: 2 },
   autoScoreNote: {
     fontSize: 10, color: Colors.green, fontStyle: 'italic',
