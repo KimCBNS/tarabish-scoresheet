@@ -861,8 +861,8 @@ const styles = StyleSheet.create({
   dealerBlockStatusPassed: { color: Colors.grey },
 
   scoreCell: { flex: 1, alignItems: 'center' },
-  scoreNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 19, color: Colors.ink },
-  totalNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 26, color: Colors.ink },
+  scoreNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 17, color: Colors.ink },
+  totalNumber: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 23, color: Colors.ink },
 
   colHeader: { fontSize: 11, fontWeight: '700', color: Colors.ink, letterSpacing: 1.5, textTransform: 'uppercase' },
   colSubHeader: { fontSize: 10, color: Colors.grey, marginTop: 1, textAlign: 'center' },
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 9, color: Colors.gold, fontWeight: '600' },
 
   emptyState: { paddingTop: 20, paddingLeft: 56 + 8, paddingRight: 8 },
-  emptyStateText: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 14, color: Colors.grey, fontStyle: 'italic' },
+  emptyStateText: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 13, color: Colors.grey, fontStyle: 'italic' },
 
   // ── Right margin ─────────────────────────────────────────────────────
   marginDivider: { width: 1, backgroundColor: 'rgba(180, 195, 210, 0.6)' },
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   winnerText: {
-    fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 18, color: Colors.gold,
+    fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 16, color: Colors.gold,
     letterSpacing: 0.8, marginBottom: 8, textAlign: 'center',
   },
   nextGameBtn: {
@@ -1074,12 +1074,12 @@ const styles = StyleSheet.create({
   // Math equation display
   mathSection: { marginTop: 4, alignItems: 'flex-end' },
   mathLabel: { fontSize: 9, color: Colors.grey, marginBottom: 2, alignSelf: 'flex-start' },
-  mathPool: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 15, color: Colors.grey },
+  mathPool: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 14, color: Colors.grey },
   mathInputRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   mathMinus: { fontSize: 18, color: Colors.ink },
   mathInput: {
     fontFamily: 'ArchitectsDaughter_400Regular',
-    fontSize: 23,
+    fontSize: 21,
     color: Colors.ink,
     minWidth: 46,
     textAlign: 'right',
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     transform: [{ rotate: '-0.3deg' }],
   },
-  mathOther: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 19, color: Colors.ink },
+  mathOther: { fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 17, color: Colors.ink },
   mathPlaceholder: { fontSize: 10, color: Colors.grey, fontStyle: 'italic', marginTop: 2 },
   autoScoreNote: {
     fontSize: 10, color: Colors.green, fontStyle: 'italic',

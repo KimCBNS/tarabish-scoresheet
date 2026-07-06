@@ -251,39 +251,39 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   title: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: '700',
     color: Colors.ink,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   confirmNote: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.grey,
     fontStyle: 'italic',
-    marginTop: -8,
-    marginBottom: 12,
+    marginTop: -7,
+    marginBottom: 11,
   },
 
   // Steps
   step: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   stepQuestion: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.ink,
-    lineHeight: 22,
-    marginBottom: 10,
+    lineHeight: 20,
+    marginBottom: 9,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 9,
   },
   chip: {
     borderWidth: 1,
     borderColor: Colors.ink,
-    paddingVertical: 7,
+    paddingVertical: 6,
     paddingHorizontal: 20,
     borderRadius: 6,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.green,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.ink,
     fontWeight: '500',
   },
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
 
   // Step 1 handoff prompt
   handoffSection: {
-    marginTop: 10,
+    marginTop: 9,
   },
   handoffText: {
     fontSize: 15,
     color: Colors.ink,
-    marginBottom: 8,
+    marginBottom: 7,
   },
   thatsMeButton: {
     borderWidth: 1.5,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   thatsMeButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.green,
     fontWeight: '600',
   },
@@ -335,8 +335,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(61, 92, 69, 0.15)',
-    padding: 14,
-    marginBottom: 12,
+    padding: 13,
+    marginBottom: 11,
   },
 
   // Seat positions (flex layout: top → middle row → bottom)
@@ -348,21 +348,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
+    marginVertical: 7,
   },
   // No flex: 1 — labels size to content width. Negative margin overlaps
-  // each label into the circle edge; zIndex keeps them on top.
+  // each label into the circle edge (scaled with the circle); zIndex keeps
+  // them on top.
   seatSide: {
     alignItems: 'center',
-    marginHorizontal: -18,
+    marginHorizontal: -16,
     zIndex: 2,
   },
 
   // The felt circle
   tableCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 126,
+    height: 126,
+    borderRadius: 63,
     backgroundColor: 'rgba(61, 92, 69, 0.45)',
     borderWidth: 1.5,
     borderColor: 'rgba(61, 92, 69, 0.65)',
@@ -378,17 +379,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   seatLabelName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.ink,
     textAlign: 'center',
   },
   seatLabelNameBold: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   seatLabelSubtitleGreen: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.green,
     marginTop: 2,
     textAlign: 'center',
@@ -397,15 +398,15 @@ const styles = StyleSheet.create({
   // Clockwise label inside the container
   clockwise: {
     textAlign: 'center',
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.grey,
-    marginTop: 6,
+    marginTop: 5,
   },
 
   // Confirm / reset
   confirmButton: {
     backgroundColor: Colors.green,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 6,
     alignItems: 'center',
   },
