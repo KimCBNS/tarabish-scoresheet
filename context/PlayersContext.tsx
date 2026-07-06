@@ -33,9 +33,11 @@ export type Hand = {
   baitTeamId: string | null;
 };
 
-// A completed game, archived when "Start Next Game" is pressed. Stores the full
-// hands array (and the team names at the time) so /gamedetail can reconstruct
-// a read-only ledger for that game without needing the live teams/seating state.
+// A completed (or early-ended) game, archived when "Start Next Game" or "End
+// this game early" is pressed. Stores the full hands array (and the team
+// names at the time) so /gamedetail can reconstruct a read-only ledger for
+// that game without needing the live teams/seating state.
+// winner is null for a game that was ended early with no one at 500+.
 export type GameHistoryEntry = {
   id: string;
   hands: Hand[];
@@ -43,7 +45,7 @@ export type GameHistoryEntry = {
   themTeamNames: string[];
   usScore: number;
   themScore: number;
-  winner: 'us' | 'them';
+  winner: 'us' | 'them' | null;
 };
 
 const DEFAULT_HOUSE_RULES: HouseRules = {
@@ -76,6 +78,9 @@ type PlayersContextType = {
   // for the next game. Teams, players and houseRules are left untouched — the
   // seating screen is where the table gets reconfirmed before the next game.
   startNextGame: () => void;
+  // Archives the current, unfinished game (winner: null) then resets hands/gameWinner.
+  // Called from "End this game early".
+  endGameEarly: () => void;
   // First-hand-of-the-night timestamp — set once, kept across games, cleared by resetAll.
   nightStartTime: number | null;
   // Wipes everything back to initial state — used by "End the Night".
@@ -150,31 +155,45 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
     setCurrentDealerIndex(prev => (prev + 1) % len);
   }
 
+  // Builds a GameHistoryEntry from the current hands/teams/seating and appends
+  // it to gameHistory. Shared by startNextGame (winner already decided) and
+  // endGameEarly (winner: null — nobody reached 500).
+  function archiveCurrentGame(winner: 'us' | 'them' | null) {
+    if (!seating) return;
+    const usTeam = teams.find(t => t.name === seating.usTeamId);
+    const themTeam = teams.find(t => t.name === seating.themTeamId);
+    let usScore = 0;
+    let themScore = 0;
+    for (const h of hands) {
+      usScore += h.usScore;
+      themScore += h.themScore;
+    }
+    const entry: GameHistoryEntry = {
+      id: Date.now().toString(),
+      hands,
+      usTeamNames: usTeam?.members ?? [],
+      themTeamNames: themTeam?.members ?? [],
+      usScore,
+      themScore,
+      winner,
+    };
+    setGameHistory(prev => [...prev, entry]);
+  }
+
   // Archives the completed game (with its full hand history) into gameHistory,
   // then clears hands/gameWinner so a new game can begin. Called from the
   // winner banner's "Start Next Game" button, right before navigating to
   // /seating to reconfirm the table.
   function startNextGame() {
-    if (gameWinner && seating) {
-      const usTeam = teams.find(t => t.name === seating.usTeamId);
-      const themTeam = teams.find(t => t.name === seating.themTeamId);
-      let usScore = 0;
-      let themScore = 0;
-      for (const h of hands) {
-        usScore += h.usScore;
-        themScore += h.themScore;
-      }
-      const entry: GameHistoryEntry = {
-        id: Date.now().toString(),
-        hands,
-        usTeamNames: usTeam?.members ?? [],
-        themTeamNames: themTeam?.members ?? [],
-        usScore,
-        themScore,
-        winner: gameWinner,
-      };
-      setGameHistory(prev => [...prev, entry]);
-    }
+    if (gameWinner) archiveCurrentGame(gameWinner);
+    setHands([]);
+    setGameWinner(null);
+  }
+
+  // Archives the current, unfinished game with winner: null, then clears
+  // hands/gameWinner. Called from "End this game early".
+  function endGameEarly() {
+    archiveCurrentGame(null);
     setHands([]);
     setGameWinner(null);
   }
@@ -203,7 +222,7 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
         hands, addHand, undoLastHand,
         currentDealerIndex, advanceDealer,
         gameWinner,
-        gameHistory, startNextGame,
+        gameHistory, startNextGame, endGameEarly,
         nightStartTime,
         resetAll,
       }}>

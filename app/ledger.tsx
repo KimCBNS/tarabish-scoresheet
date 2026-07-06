@@ -1,4 +1,5 @@
 import {
+  Alert,
   LayoutAnimation,
   Platform,
   ScrollView,
@@ -500,7 +501,7 @@ export default function LedgerScreen() {
     hands, addHand, undoLastHand,
     seating, teams, houseRules,
     currentDealerIndex, advanceDealer,
-    gameWinner, gameHistory, startNextGame,
+    gameWinner, gameHistory, startNextGame, endGameEarly,
   } = usePlayers();
 
   const [marginOpen, setMarginOpen] = useState(false);
@@ -525,7 +526,7 @@ export default function LedgerScreen() {
   const currentDealerName = seatOrder[currentDealerIndex] ?? '';
 
   // ── Derive display data ───────────────────────────────────────────────────
-  const { entries: displayHands } = buildDisplayHands(hands, usTeamId);
+  const { entries: displayHands, usTotal, themTotal } = buildDisplayHands(hands, usTeamId);
 
   // ── Previous games list — numbered by play order, most recent shown first ──
   const gameHistoryDisplay = gameHistory
@@ -576,6 +577,26 @@ export default function LedgerScreen() {
   function handleStartNextGame() {
     startNextGame();
     router.push({ pathname: '/seating', params: { fromNextGame: '1' } });
+  }
+
+  // Destructive confirm — archives the unfinished game (winner: null) and
+  // sends the scorekeeper back to /seating to set up the next game.
+  function handleEndGameEarly() {
+    Alert.alert(
+      'End this game early?',
+      `Current score is ${usTotal}–${themTotal}. No winner will be recorded.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, end it',
+          style: 'destructive',
+          onPress: () => {
+            endGameEarly();
+            router.push({ pathname: '/seating', params: { fromNextGame: '1' } });
+          },
+        },
+      ]
+    );
   }
 
   function handlePassDeal() {
@@ -731,7 +752,9 @@ export default function LedgerScreen() {
                   onPress={() => router.push({ pathname: '/gamedetail', params: { id: entry.id } })}
                   activeOpacity={0.7}>
                   <Text style={styles.historyText}>
-                    Game {gameNumber} — {winnerNames} def. {loserNames}, {winScore}–{loseScore}
+                    {entry.winner === null
+                      ? `Game ${gameNumber} — ended early, ${entry.usScore}–${entry.themScore}`
+                      : `Game ${gameNumber} — ${winnerNames} def. ${loserNames}, ${winScore}–${loseScore}`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -766,7 +789,7 @@ export default function LedgerScreen() {
       {/* ── Bottom action bar ────────────────────────────────────────────── */}
       {/* "+ Add Hand" and Undo both live in the scratch margin now */}
       <SafeAreaView style={styles.actionBar} edges={['bottom']}>
-        <TouchableOpacity style={styles.endGameLink} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.endGameLink} onPress={handleEndGameEarly} activeOpacity={0.7}>
           <Text style={styles.endGameText}>End this game early</Text>
         </TouchableOpacity>
       </SafeAreaView>

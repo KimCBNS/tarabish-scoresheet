@@ -142,7 +142,7 @@ export default function SeatingScreen() {
     router.push('/deal');
   }
 
-  function handleStartOver() {
+  function handleResetTable() {
     setScorekeeper(null);
     setScorekeeperConfirmed(false);
     setLeftId(null);
@@ -223,16 +223,16 @@ export default function SeatingScreen() {
         <View style={styles.confirmSection}>
           <TableDiagram layout={seatLayout} />
 
-          <TouchableOpacity onPress={handleStartOver} style={styles.startOverButton}>
-            <Text style={styles.startOverText}>Start over</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
             onPress={handleConfirm}
             disabled={!canConfirm}
             activeOpacity={0.8}>
             <Text style={styles.confirmButtonText}>Confirm Table</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleResetTable} style={styles.resetTableButton}>
+            <Text style={styles.resetTableText}>Reset Table</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -254,26 +254,26 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: Colors.ink,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   confirmNote: {
     fontSize: 13,
     color: Colors.grey,
     fontStyle: 'italic',
-    marginTop: -20,
-    marginBottom: 24,
+    marginTop: -8,
+    marginBottom: 12,
   },
 
   // Steps
   step: {
-    marginBottom: 32,
+    marginBottom: 18,
   },
   stepQuestion: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.ink,
-    lineHeight: 26,
-    marginBottom: 16,
+    lineHeight: 22,
+    marginBottom: 10,
   },
   chipRow: {
     flexDirection: 'row',
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderColor: Colors.ink,
-    paddingVertical: 10,
+    paddingVertical: 7,
     paddingHorizontal: 20,
     borderRadius: 6,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.green,
   },
   chipText: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.ink,
     fontWeight: '500',
   },
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
 
   // Step 1 handoff prompt
   handoffSection: {
-    marginTop: 20,
+    marginTop: 10,
   },
   handoffText: {
     fontSize: 15,
     color: Colors.ink,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   thatsMeButton: {
     borderWidth: 1.5,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
 
   // Confirmation section
   confirmSection: {
-    marginTop: 8,
+    marginTop: 4,
   },
 
   // Table container — shaded rounded box
@@ -335,34 +335,34 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(61, 92, 69, 0.15)',
-    padding: 20,
-    marginBottom: 20,
+    padding: 14,
+    marginBottom: 12,
   },
 
   // Seat positions (flex layout: top → middle row → bottom)
   seatTopBottom: {
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   tableMiddleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 14,
+    marginVertical: 8,
   },
   // No flex: 1 — labels size to content width. Negative margin overlaps
-  // each label 20px into the circle edge; zIndex keeps them on top.
+  // each label into the circle edge; zIndex keeps them on top.
   seatSide: {
     alignItems: 'center',
-    marginHorizontal: -20,
+    marginHorizontal: -18,
     zIndex: 2,
   },
 
   // The felt circle
   tableCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: 'rgba(61, 92, 69, 0.45)',
     borderWidth: 1.5,
     borderColor: 'rgba(61, 92, 69, 0.65)',
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   seatLabelSubtitleGreen: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.green,
     marginTop: 2,
     textAlign: 'center',
@@ -397,22 +397,12 @@ const styles = StyleSheet.create({
   // Clockwise label inside the container
   clockwise: {
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.grey,
-    marginTop: 8,
+    marginTop: 6,
   },
 
-  // Start over / confirm
-  startOverButton: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  startOverText: {
-    fontSize: 14,
-    color: Colors.grey,
-    textDecorationLine: 'underline',
-  },
+  // Confirm / reset
   confirmButton: {
     backgroundColor: Colors.green,
     paddingVertical: 16,
@@ -427,5 +417,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  resetTableButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  resetTableText: {
+    fontSize: 14,
+    color: Colors.grey,
+    textDecorationLine: 'underline',
   },
 });

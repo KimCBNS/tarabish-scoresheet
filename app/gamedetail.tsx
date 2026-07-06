@@ -43,8 +43,17 @@ export default function GameDetailScreen() {
 
       {/* ── Game summary ──────────────────────────────────────────────── */}
       <View style={styles.summaryBlock}>
-        <Text style={styles.summaryDef}>{winnerNames} def. {loserNames}</Text>
-        <Text style={styles.summaryScore}>{winScore} – {loseScore}</Text>
+        {entry.winner === null ? (
+          <>
+            <Text style={styles.summaryDef}>Ended early — no winner recorded</Text>
+            <Text style={styles.summaryScore}>{entry.usScore} – {entry.themScore}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.summaryDef}>{winnerNames} def. {loserNames}</Text>
+            <Text style={styles.summaryScore}>{winScore} – {loseScore}</Text>
+          </>
+        )}
         <Text style={styles.summaryHands}>{handsPlayed} hands played</Text>
       </View>
 
