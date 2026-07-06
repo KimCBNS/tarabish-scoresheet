@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { usePlayers, type Team } from '@/context/PlayersContext';
@@ -149,130 +150,140 @@ export default function SeatingScreen() {
   }
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Set up the table</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Set up the table</Text>
 
-      {isConfirmingTable && (
-        <Text style={styles.confirmNote}>Same table? Confirm or update below.</Text>
-      )}
-
-      {/* ── Step 1: Who's marking score? ──────────────────────────────── */}
-      <View style={styles.step}>
-        <Text style={styles.stepQuestion}>Who's marking score tonight?</Text>
-        <View style={styles.chipRow}>
-          {players.map(name => (
-            <TouchableOpacity
-              key={name}
-              style={[styles.chip, scorekeeperId === name && styles.chipSelected]}
-              onPress={() => {
-                if (scorekeeperId === name) return;
-                setScorekeeper(name);
-                setScorekeeperConfirmed(false);
-                setLeftId(null);
-              }}
-              activeOpacity={0.7}>
-              <Text style={[styles.chipText, scorekeeperId === name && styles.chipTextSelected]}>
-                {name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Handoff prompt — shown once a name is tapped, before confirmation */}
-        {scorekeeperId != null && !scorekeeperConfirmed && (
-          <View style={styles.handoffSection}>
-            <Text style={styles.handoffText}>
-              Please pass the phone to {scorekeeperId} 👋
-            </Text>
-            <TouchableOpacity
-              style={styles.thatsMeButton}
-              onPress={() => setScorekeeperConfirmed(true)}
-              activeOpacity={0.7}>
-              <Text style={styles.thatsMeButtonText}>
-                {scorekeeperId} has the phone — let's go!
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {isConfirmingTable && (
+          <Text style={styles.confirmNote}>Same table? Confirm or update below.</Text>
         )}
-      </View>
 
-      {/* ── Step 2: Who is to the left? ───────────────────────────────── */}
-      {scorekeeperConfirmed && (
+        {/* ── Step 1: Who's marking score? ──────────────────────────────── */}
         <View style={styles.step}>
-          <Text style={styles.stepQuestion}>
-            Hi {scorekeeperId}! To set up the table, who is sitting on your left?
-          </Text>
+          <Text style={styles.stepQuestion}>Who's marking score tonight?</Text>
           <View style={styles.chipRow}>
-            {opponents.map(name => (
+            {players.map(name => (
               <TouchableOpacity
                 key={name}
-                style={[styles.chip, leftId === name && styles.chipSelected]}
-                onPress={() => setLeftId(name)}
+                style={[styles.chip, scorekeeperId === name && styles.chipSelected]}
+                onPress={() => {
+                  if (scorekeeperId === name) return;
+                  setScorekeeper(name);
+                  setScorekeeperConfirmed(false);
+                  setLeftId(null);
+                }}
                 activeOpacity={0.7}>
-                <Text style={[styles.chipText, leftId === name && styles.chipTextSelected]}>
+                <Text style={[styles.chipText, scorekeeperId === name && styles.chipTextSelected]}>
                   {name}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Handoff prompt — shown once a name is tapped, before confirmation */}
+          {scorekeeperId != null && !scorekeeperConfirmed && (
+            <View style={styles.handoffSection}>
+              <Text style={styles.handoffText}>
+                Please pass the phone to {scorekeeperId} 👋
+              </Text>
+              <TouchableOpacity
+                style={styles.thatsMeButton}
+                onPress={() => setScorekeeperConfirmed(true)}
+                activeOpacity={0.7}>
+                <Text style={styles.thatsMeButtonText}>
+                  {scorekeeperId} has the phone — let's go!
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      )}
 
-      {/* ── Table confirmation — shown after Step 2 ───────────────────── */}
-      {seatLayout && (
-        <View style={styles.confirmSection}>
-          <TableDiagram layout={seatLayout} />
+        {/* ── Step 2: Who is to the left? ───────────────────────────────── */}
+        {scorekeeperConfirmed && (
+          <View style={styles.step}>
+            <Text style={styles.stepQuestion}>
+              Hi {scorekeeperId}! To set up the table, who is sitting on your left?
+            </Text>
+            <View style={styles.chipRow}>
+              {opponents.map(name => (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.chip, leftId === name && styles.chipSelected]}
+                  onPress={() => setLeftId(name)}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.chipText, leftId === name && styles.chipTextSelected]}>
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
-          <TouchableOpacity
-            style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
-            onPress={handleConfirm}
-            disabled={!canConfirm}
-            activeOpacity={0.8}>
-            <Text style={styles.confirmButtonText}>Confirm Table</Text>
-          </TouchableOpacity>
+        {/* ── Table confirmation — shown after Step 2 ───────────────────── */}
+        {seatLayout && (
+          <View style={styles.confirmSection}>
+            <TableDiagram layout={seatLayout} />
 
-          <TouchableOpacity onPress={handleResetTable} style={styles.resetTableButton}>
-            <Text style={styles.resetTableText}>Reset Table</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+            <TouchableOpacity
+              style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
+              onPress={handleConfirm}
+              disabled={!canConfirm}
+              activeOpacity={0.8}>
+              <Text style={styles.confirmButtonText}>Confirm Table</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleResetTable} style={styles.resetTableButton}>
+              <Text style={styles.resetTableText}>Reset Table</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scroll: {
+  container: {
     flex: 1,
     backgroundColor: Colors.cream,
   },
-  content: {
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
-    paddingBottom: 60,
+    paddingBottom: 24,
   },
   title: {
-    fontSize: 25,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.ink,
-    marginBottom: 14,
+    marginBottom: 13,
   },
   confirmNote: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.grey,
     fontStyle: 'italic',
     marginTop: -7,
-    marginBottom: 11,
+    marginBottom: 10,
   },
 
   // Steps
   step: {
-    marginBottom: 16,
+    marginBottom: 15,
   },
   stepQuestion: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.ink,
-    lineHeight: 20,
+    lineHeight: 19,
     marginBottom: 9,
   },
   chipRow: {
@@ -292,7 +303,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.green,
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.ink,
     fontWeight: '500',
   },
@@ -319,7 +330,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   thatsMeButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.green,
     fontWeight: '600',
   },
@@ -335,8 +346,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(61, 92, 69, 0.15)',
-    padding: 13,
-    marginBottom: 11,
+    padding: 12,
+    marginBottom: 10,
   },
 
   // Seat positions (flex layout: top → middle row → bottom)
@@ -355,15 +366,15 @@ const styles = StyleSheet.create({
   // them on top.
   seatSide: {
     alignItems: 'center',
-    marginHorizontal: -16,
+    marginHorizontal: -15,
     zIndex: 2,
   },
 
   // The felt circle
   tableCircle: {
-    width: 126,
-    height: 126,
-    borderRadius: 63,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: 'rgba(61, 92, 69, 0.45)',
     borderWidth: 1.5,
     borderColor: 'rgba(61, 92, 69, 0.65)',
@@ -379,17 +390,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   seatLabelName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: Colors.ink,
     textAlign: 'center',
   },
   seatLabelNameBold: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   seatLabelSubtitleGreen: {
-    fontSize: 9,
+    fontSize: 8,
     color: Colors.green,
     marginTop: 2,
     textAlign: 'center',
@@ -398,7 +409,7 @@ const styles = StyleSheet.create({
   // Clockwise label inside the container
   clockwise: {
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.grey,
     marginTop: 5,
   },
@@ -406,7 +417,7 @@ const styles = StyleSheet.create({
   // Confirm / reset
   confirmButton: {
     backgroundColor: Colors.green,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 6,
     alignItems: 'center',
   },
