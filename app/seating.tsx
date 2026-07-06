@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { usePlayers, type Team } from '@/context/PlayersContext';
 
@@ -93,13 +93,24 @@ function TableDiagram({ layout }: { layout: SeatLayout }) {
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
 export default function SeatingScreen() {
-  const { players, teams, setSeating } = usePlayers();
+  const { players, teams, seating, setSeating } = usePlayers();
 
-  const [scorekeeperId, setScorekeeper] = useState<string | null>(null);
+  // Coming from "Start Next Game" — pre-fill the previous answers so this
+  // reads as a confirmation ("same table?") rather than starting from scratch.
+  const { fromNextGame } = useLocalSearchParams<{ fromNextGame?: string }>();
+  const isConfirmingTable = fromNextGame != null && seating != null;
+
+  const [scorekeeperId, setScorekeeper] = useState<string | null>(
+    () => (isConfirmingTable ? seating!.scorekeeperId : null)
+  );
   // Confirmed once the intended scorekeeper taps the handoff button, ensuring
   // the right person is holding the phone before asking personal seating questions.
-  const [scorekeeperConfirmed, setScorekeeperConfirmed] = useState(false);
-  const [leftId, setLeftId] = useState<string | null>(null);
+  // Pre-populating from a next-game confirmation skips the handoff re-prompt —
+  // the same person is presumably still holding the phone.
+  const [scorekeeperConfirmed, setScorekeeperConfirmed] = useState(isConfirmingTable);
+  const [leftId, setLeftId] = useState<string | null>(
+    () => (isConfirmingTable ? seating!.seatOrder[1] ?? null : null)
+  );
 
   // Partners always sit opposite — only opponents can sit to
   // the scorekeeper's left or right
@@ -140,6 +151,10 @@ export default function SeatingScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Set up the table</Text>
+
+      {isConfirmingTable && (
+        <Text style={styles.confirmNote}>Same table? Confirm or update below.</Text>
+      )}
 
       {/* ── Step 1: Who's marking score? ──────────────────────────────── */}
       <View style={styles.step}>
@@ -240,6 +255,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.ink,
     marginBottom: 32,
+  },
+  confirmNote: {
+    fontSize: 13,
+    color: Colors.grey,
+    fontStyle: 'italic',
+    marginTop: -20,
+    marginBottom: 24,
   },
 
   // Steps

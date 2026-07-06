@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import { useFonts, ArchitectsDaughter_400Regular } from '@expo-google-fonts/architects-daughter';
 import { Colors } from '@/constants/theme';
 import { LinedPaper } from '@/components/LinedPaper';
@@ -21,17 +22,13 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-// ─── Hardcoded previous-match history (real history wired in a later screen) ─
-const SAMPLE_HISTORY = [
-  { id: 2, label: 'Match 2 — Kim & Alana def. Morene & Arlene, 512–301' },
-  { id: 1, label: 'Match 1 — Morene & Arlene def. Kim & Alana, 504–488' },
-];
-
 // ─── Display type ─────────────────────────────────────────────────────────────
 // isFirstDealt: true for the first non-passed hand — suppresses the addition
 // line and bold running total (the raw score IS the total for that hand).
 // allTags: merged list of all tags for the hand, shown in the right margin column.
-type HandEntry = {
+// Exported (with buildDisplayHands and HandRow below) so /gamedetail can render
+// a read-only ledger for a past game using the exact same rendering.
+export type HandEntry = {
   dealer: string;
   passed?: true;
   us?: { score: number };
@@ -45,7 +42,7 @@ type HandEntry = {
 // ─── Convert context Hand[] into display entries ──────────────────────────────
 // Accumulates running totals. Tags are collected into a single allTags list
 // and rendered in the right margin column (Change 3 — not split by team).
-function buildDisplayHands(
+export function buildDisplayHands(
   hands: Hand[],
   usTeamId: string,
 ): { entries: HandEntry[]; usTotal: number; themTotal: number } {
@@ -159,7 +156,7 @@ function CheckRow({
 // Four columns: dealer block | US score | THEM score | tag chips.
 // Tags are embedded as the 4th column so they're vertically co-located with their
 // row by construction — no parallel height-matching required.
-function HandRow({ hand, compact }: { hand: HandEntry; compact: boolean }) {
+export function HandRow({ hand, compact }: { hand: HandEntry; compact: boolean }) {
   if (hand.passed) {
     return (
       <View style={styles.passedRow}>
@@ -503,7 +500,7 @@ export default function LedgerScreen() {
     hands, addHand, undoLastHand,
     seating, teams, houseRules,
     currentDealerIndex, advanceDealer,
-    matchWinner,
+    gameWinner, gameHistory, startNextGame,
   } = usePlayers();
 
   const [marginOpen, setMarginOpen] = useState(false);
@@ -530,10 +527,15 @@ export default function LedgerScreen() {
   // ── Derive display data ───────────────────────────────────────────────────
   const { entries: displayHands } = buildDisplayHands(hands, usTeamId);
 
+  // ── Previous games list — numbered by play order, most recent shown first ──
+  const gameHistoryDisplay = gameHistory
+    .map((entry, i) => ({ entry, gameNumber: i + 1 }))
+    .reverse();
+
   // ── Win detection ─────────────────────────────────────────────────────────
-  // matchWinner lives in PlayersContext (set by addHand/undoLastHand) so it
+  // gameWinner lives in PlayersContext (set by addHand/undoLastHand) so it
   // stays correct if the winning hand is later undone.
-  const matchOver = matchWinner !== null;
+  const gameOver = gameWinner !== null;
 
   // ── Margin animation helpers ──────────────────────────────────────────────
   function openMargin() {
@@ -569,6 +571,13 @@ export default function LedgerScreen() {
     setConfirmingUndo(false);
   }
 
+  // Archives the finished game, resets hands/gameWinner, then sends the
+  // scorekeeper to /seating to reconfirm (or change) the table for next game.
+  function handleStartNextGame() {
+    startNextGame();
+    router.push({ pathname: '/seating', params: { fromNextGame: '1' } });
+  }
+
   function handlePassDeal() {
     addHand({
       dealerId: currentDealerName,
@@ -594,7 +603,7 @@ export default function LedgerScreen() {
         <Text style={styles.statusText}>
           It's <Text style={styles.statusDealer}>{currentDealerName || '—'}</Text>'s deal
         </Text>
-        {!matchOver && (
+        {!gameOver && (
           <TouchableOpacity activeOpacity={0.7} onPress={handlePassDeal}>
             <Text style={styles.passDealBtn}>Pass deal</Text>
           </TouchableOpacity>
@@ -666,7 +675,7 @@ export default function LedgerScreen() {
                   <View />
 
                   <View style={styles.marginBottomStack}>
-                    {!matchOver && (
+                    {!gameOver && (
                       <TouchableOpacity
                         style={styles.marginAddHandLabel}
                         onPress={openMargin}
@@ -703,36 +712,53 @@ export default function LedgerScreen() {
             </View>
           </View>
 
-          {/* ── Match history ─────────────────────────────────────────────── */}
+          {/* ── Game history ──────────────────────────────────────────────── */}
           <View style={styles.historySection}>
             <View style={styles.historyDivider} />
-            <Text style={styles.historyHeading}>Previous matches</Text>
-            {SAMPLE_HISTORY.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.historyRow}
-                onPress={() => {}}
-                activeOpacity={0.7}>
-                <Text style={styles.historyText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
+            <Text style={styles.historyHeading}>Previous games</Text>
+            {gameHistoryDisplay.length === 0 && (
+              <Text style={styles.historyEmptyText}>No games finished yet tonight</Text>
+            )}
+            {gameHistoryDisplay.map(({ entry, gameNumber }) => {
+              const winnerNames = entry.winner === 'us' ? entry.usTeamNames.join(' & ') : entry.themTeamNames.join(' & ');
+              const loserNames = entry.winner === 'us' ? entry.themTeamNames.join(' & ') : entry.usTeamNames.join(' & ');
+              const winScore = entry.winner === 'us' ? entry.usScore : entry.themScore;
+              const loseScore = entry.winner === 'us' ? entry.themScore : entry.usScore;
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={styles.historyRow}
+                  onPress={() => router.push({ pathname: '/gamedetail', params: { id: entry.id } })}
+                  activeOpacity={0.7}>
+                  <Text style={styles.historyText}>
+                    Game {gameNumber} — {winnerNames} def. {loserNames}, {winScore}–{loseScore}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
         </LinedPaper>
       </ScrollView>
 
       {/* ── Winner banner (pinned above action bar) ─────────────────────── */}
-      {matchOver && matchWinner && (
+      {gameOver && gameWinner && (
         <View style={styles.winnerBanner}>
           <Text
             style={styles.winnerText}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.7}>
-            ★ {matchWinner === 'us' ? usLabel : themLabel} win! ★
+            ★ {gameWinner === 'us' ? usLabel : themLabel} win! ★
           </Text>
-          <TouchableOpacity style={styles.nextMatchBtn} activeOpacity={0.8}>
-            <Text style={styles.nextMatchBtnText}>Start Next Match</Text>
+          <TouchableOpacity style={styles.nextGameBtn} onPress={handleStartNextGame} activeOpacity={0.8}>
+            <Text style={styles.nextGameBtnText}>Start Next Game</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.endNightLink}
+            onPress={() => router.push('/endnight')}
+            activeOpacity={0.7}>
+            <Text style={styles.endNightLinkText}>End the Night</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -740,8 +766,8 @@ export default function LedgerScreen() {
       {/* ── Bottom action bar ────────────────────────────────────────────── */}
       {/* "+ Add Hand" and Undo both live in the scratch margin now */}
       <SafeAreaView style={styles.actionBar} edges={['bottom']}>
-        <TouchableOpacity style={styles.endMatchLink} activeOpacity={0.7}>
-          <Text style={styles.endMatchText}>End this match early</Text>
+        <TouchableOpacity style={styles.endGameLink} activeOpacity={0.7}>
+          <Text style={styles.endGameText}>End this game early</Text>
         </TouchableOpacity>
       </SafeAreaView>
 
@@ -887,7 +913,7 @@ const styles = StyleSheet.create({
   // Collapses to nothing while the scratch margin entry form is open
   handTagColHidden: { width: 0, paddingLeft: 0, overflow: 'hidden' },
 
-  // ── Match history ────────────────────────────────────────────────────
+  // ── Game history ─────────────────────────────────────────────────────
   historySection: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
   historyDivider: {
     borderTopWidth: 1,
@@ -900,8 +926,9 @@ const styles = StyleSheet.create({
     fontSize: 11, fontWeight: '600', color: Colors.grey,
     textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10,
   },
-  historyRow: { paddingVertical: 8, opacity: 0.4 },
+  historyRow: { paddingVertical: 8 },
   historyText: { fontSize: 13, color: Colors.ink },
+  historyEmptyText: { fontSize: 13, color: Colors.grey, fontStyle: 'italic' },
 
   // ── Winner banner ────────────────────────────────────────────────────
   winnerBanner: {
@@ -918,11 +945,14 @@ const styles = StyleSheet.create({
     fontFamily: 'ArchitectsDaughter_400Regular', fontSize: 18, color: Colors.gold,
     letterSpacing: 0.8, marginBottom: 8, textAlign: 'center',
   },
-  nextMatchBtn: {
+  nextGameBtn: {
     borderWidth: 1.5, borderColor: Colors.green,
     paddingHorizontal: 20, paddingVertical: 8, borderRadius: 5,
+    marginBottom: 8,
   },
-  nextMatchBtnText: { fontSize: 14, color: Colors.green, fontWeight: '600' },
+  nextGameBtnText: { fontSize: 14, color: Colors.green, fontWeight: '600' },
+  endNightLink: { paddingVertical: 2 },
+  endNightLinkText: { fontSize: 12, color: Colors.grey, textDecorationLine: 'underline' },
 
   // ── Bottom action bar ────────────────────────────────────────────────
   actionBar: {
@@ -933,8 +963,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 4,
   },
-  endMatchLink: { alignItems: 'center', paddingVertical: 4 },
-  endMatchText: { fontSize: 12, color: Colors.grey },
+  endGameLink: { alignItems: 'center', paddingVertical: 4 },
+  endGameText: { fontSize: 12, color: Colors.grey },
 
   // ── Scratch margin entry form ─────────────────────────────────────────
   entryContainer: { paddingHorizontal: 5, paddingTop: 4, paddingBottom: 12 },
@@ -1051,3 +1081,7 @@ const styles = StyleSheet.create({
   entryPostBtnDisabled: { backgroundColor: Colors.grey, opacity: 0.5 },
   entryPostBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
+
+// Re-exported so /gamedetail can reuse the exact ledger visual style (lined
+// paper columns, dealer blocks, headers) for its read-only past-game view.
+export { styles as ledgerStyles };

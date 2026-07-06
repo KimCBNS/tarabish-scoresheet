@@ -17,6 +17,17 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="ledger" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="gamedetail"
+          options={{
+            headerShown: true,
+            title: 'Game Summary',
+            headerStyle: { backgroundColor: Colors.paper },
+            headerTintColor: Colors.ink,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen name="endnight" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" backgroundColor={Colors.cream} />
     </PlayersProvider>
