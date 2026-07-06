@@ -588,11 +588,18 @@ export default function LedgerScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Yes, end it',
-          style: 'destructive',
+          text: 'Set Up New Game',
           onPress: () => {
             endGameEarly();
             router.push({ pathname: '/seating', params: { fromNextGame: '1' } });
+          },
+        },
+        {
+          text: 'End the Night',
+          style: 'destructive',
+          onPress: () => {
+            endGameEarly();
+            router.push('/endnight');
           },
         },
       ]
