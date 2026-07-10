@@ -1,4 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Colors } from '@/constants/theme';
 
 export type Team = {
   name: string;
@@ -54,6 +57,10 @@ const DEFAULT_HOUSE_RULES: HouseRules = {
   noTrumpAllowed: true,
 };
 
+// Everything that should survive a force-quit / phone restart, saved as one
+// JSON blob under this key. See the load/save effects below.
+const STORAGE_KEY = 'tarabish_game_state';
+
 type PlayersContextType = {
   players: string[];
   setPlayers: (players: string[]) => void;
@@ -82,8 +89,8 @@ type PlayersContextType = {
   // Called from "End this game early".
   endGameEarly: () => void;
   // First-hand-of-the-night timestamp — set once, kept across games, cleared by resetAll.
-  nightStartTime: number | null;
-  // Wipes everything back to initial state — used by "End the Night".
+  nightStartTime: Date | null;
+  // Wipes everything back to initial state (and clears persisted storage) — used by "End the Night".
   resetAll: () => void;
 };
 
@@ -98,7 +105,59 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
   const [currentDealerIndex, setCurrentDealerIndex] = useState(0);
   const [gameWinner, setGameWinner] = useState<'us' | 'them' | null>(null);
   const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
-  const [nightStartTime, setNightStartTime] = useState<number | null>(null);
+  const [nightStartTime, setNightStartTime] = useState<Date | null>(null);
+
+  // True until the initial AsyncStorage read finishes. Blocks rendering
+  // {children} so the app never briefly shows a fresh/empty state before a
+  // saved game has had a chance to load.
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ── Load persisted state once on launch ─────────────────────────────────
+  useEffect(() => {
+    async function load() {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setPlayers(saved.players ?? []);
+          setTeams(saved.teams ?? []);
+          setSeatingState(saved.seating ?? null);
+          setHouseRules(saved.houseRules ?? DEFAULT_HOUSE_RULES);
+          setHands(saved.hands ?? []);
+          setGameWinner(saved.gameWinner ?? null);
+          setCurrentDealerIndex(saved.currentDealerIndex ?? 0);
+          setGameHistory(saved.gameHistory ?? []);
+          // Dates don't survive JSON — they come back as ISO strings.
+          setNightStartTime(saved.nightStartTime ? new Date(saved.nightStartTime) : null);
+        }
+      } catch {
+        // silent fail — corrupt/unreadable storage just means a fresh start
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  // ── Save persisted state on every change, once the initial load is done ──
+  // (Skipping while isLoading avoids briefly overwriting the saved data with
+  // the provider's default/empty state before it's had a chance to load.)
+  useEffect(() => {
+    if (isLoading) return;
+    async function save() {
+      try {
+        const state = {
+          players, teams, seating, houseRules,
+          hands, gameWinner, currentDealerIndex,
+          gameHistory, nightStartTime,
+        };
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        // silent fail — don't crash the app if storage fails
+      }
+    }
+    save();
+  }, [isLoading, players, teams, seating, houseRules, hands, gameWinner, currentDealerIndex, gameHistory, nightStartTime]);
 
   function setSeating(s: SeatingSetup) {
     setSeatingState(s);
@@ -130,7 +189,7 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
 
   function addHand(hand: Omit<Hand, 'id'>) {
     // First hand of the whole night starts the clock; later games don't reset it.
-    setNightStartTime(prev => prev ?? Date.now());
+    setNightStartTime(prev => prev ?? new Date());
     setHands(prev => {
       const next = [...prev, { ...hand, id: Date.now().toString() }];
       setGameWinner(computeWinner(next));
@@ -198,7 +257,8 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
     setGameWinner(null);
   }
 
-  // "End the Night" — wipes every piece of state back to its initial value.
+  // "End the Night" — clears the persisted save and wipes every piece of
+  // state back to its initial value.
   function resetAll() {
     setPlayers([]);
     setTeams([]);
@@ -209,6 +269,13 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
     setGameWinner(null);
     setGameHistory([]);
     setNightStartTime(null);
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => {
+      // silent fail — nothing to do if storage can't be cleared
+    });
+  }
+
+  if (isLoading) {
+    return <View style={styles.loadingScreen} />;
   }
 
   return (
@@ -236,3 +303,7 @@ export function usePlayers() {
   if (!ctx) throw new Error('usePlayers must be used inside PlayersProvider');
   return ctx;
 }
+
+const styles = StyleSheet.create({
+  loadingScreen: { flex: 1, backgroundColor: Colors.cream },
+});
