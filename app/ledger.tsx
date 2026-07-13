@@ -206,11 +206,6 @@ export function HandRow({ hand, compact }: { hand: HandEntry; compact: boolean }
   );
 }
 
-// ─── Section divider used inside the entry form ───────────────────────────────
-function EntrySectionDivider() {
-  return <View style={styles.entrySectionDivider} />;
-}
-
 // ─── Scratch margin entry form ─────────────────────────────────────────────────
 // Renders inside the expanded right-hand scratch margin. Unmounts on cancel/post,
 // resetting all state automatically.
@@ -344,66 +339,126 @@ function ScratchMarginEntry({
       </TouchableOpacity>
 
       {/* ── Section 1: WHO COUNTED ─────────────────────────────────────── */}
-      <Text style={[styles.entrySectionHeader, whoCountedDone && styles.entrySectionHeaderDone]}>
-        WHO COUNTED
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.entryTeamBtn, countedTeamId === usTeamId && styles.entryTeamBtnActive]}
-        onPress={() => setCountedTeamId(usTeamId)}
-        activeOpacity={0.8}>
-        <Text style={[styles.entryTeamBtnText, countedTeamId === usTeamId && styles.entryTeamBtnTextActive]}>
-          {usLabel}
+      <View style={styles.entrySectionBox}>
+        <Text style={[styles.entrySectionHeader, whoCountedDone && styles.entrySectionHeaderDone]}>
+          WHO COUNTED
         </Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.entryTeamBtn, countedTeamId === themTeamId && styles.entryTeamBtnActive]}
-        onPress={() => setCountedTeamId(themTeamId)}
-        activeOpacity={0.8}>
-        <Text style={[styles.entryTeamBtnText, countedTeamId === themTeamId && styles.entryTeamBtnTextActive]}>
-          {themLabel}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.entryTeamBtn, countedTeamId === usTeamId && styles.entryTeamBtnActive]}
+          onPress={() => setCountedTeamId(usTeamId)}
+          activeOpacity={0.8}>
+          <Text style={[styles.entryTeamBtnText, countedTeamId === usTeamId && styles.entryTeamBtnTextActive]}>
+            {usLabel}
+          </Text>
+        </TouchableOpacity>
 
-      <EntrySectionDivider />
+        <TouchableOpacity
+          style={[styles.entryTeamBtn, countedTeamId === themTeamId && styles.entryTeamBtnActive]}
+          onPress={() => setCountedTeamId(themTeamId)}
+          activeOpacity={0.8}>
+          <Text style={[styles.entryTeamBtnText, countedTeamId === themTeamId && styles.entryTeamBtnTextActive]}>
+            {themLabel}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* ── Section 2: WHAT'S OUT ──────────────────────────────────────── */}
-      <Text style={[styles.entrySectionHeader, whatsOutDone && styles.entrySectionHeaderDone]}>
-        WHAT'S OUT
-      </Text>
+      <View style={styles.entrySectionBox}>
+        <Text style={[styles.entrySectionHeader, whatsOutDone && styles.entrySectionHeaderDone]}>
+          WHAT'S OUT
+        </Text>
 
-      <Stepper
-        label="Run ×20" value={runs20} max={2}
-        onDec={() => setRuns20(v => Math.max(0, v - 1))}
-        onInc={() => setRuns20(v => Math.min(2, v + 1))} />
+        <Stepper
+          label="Run ×20" value={runs20} max={2}
+          onDec={() => setRuns20(v => Math.max(0, v - 1))}
+          onInc={() => setRuns20(v => Math.min(2, v + 1))} />
 
-      <Stepper
-        label="Run ×50" value={runs50} max={2}
-        onDec={() => setRuns50(v => Math.max(0, v - 1))}
-        onInc={() => setRuns50(v => Math.min(2, v + 1))} />
+        <Stepper
+          label="Run ×50" value={runs50} max={2}
+          onDec={() => setRuns50(v => Math.max(0, v - 1))}
+          onInc={() => setRuns50(v => Math.min(2, v + 1))} />
 
-      {/* Bella is hidden when no trump (no trump suit = Bella impossible) */}
-      {!noTrump && (
-        <CheckRow label="Bella  +20" value={bella} onToggle={setBella} />
-      )}
+        {/* Bella is hidden when no trump (no trump suit = Bella impossible) */}
+        {!noTrump && (
+          <CheckRow label="Bella  +20" value={bella} onToggle={setBella} />
+        )}
 
-      <CheckRow
-        label="Bait"
-        value={bait}
-        onToggle={v => { setBait(v); if (!v) setBaitTeamId(null); }} />
-
-      {houseRules.noTrumpAllowed && (
         <CheckRow
-          label="No Trump"
-          value={noTrump}
-          onToggle={v => { setNoTrump(v); if (v) setBella(false); }} />
-      )}
+          label="Bait"
+          value={bait}
+          onToggle={v => { setBait(v); if (!v) setBaitTeamId(null); }} />
 
-      {/* Bait branch: who went bait? — appears inside WHAT'S OUT when bait is checked */}
+        {houseRules.noTrumpAllowed && (
+          <CheckRow
+            label="No Trump"
+            value={noTrump}
+            onToggle={v => { setNoTrump(v); if (v) setBella(false); }} />
+        )}
+      </View>
+
+      {/* ── Section 3: THE SCORE ──────────────────────────────────────────── */}
+      <View style={styles.entrySectionBox}>
+        <Text style={[styles.entrySectionHeader, theScoreDone && styles.entrySectionHeaderDone]}>
+          THE SCORE
+        </Text>
+
+        {countedTeamId ? (
+          <View style={styles.mathSection}>
+            <Text style={styles.mathLabel}>{countedLabel} counted:</Text>
+
+            {/* Count total — updates live as runs/bella/noTrump change */}
+            <Text style={styles.mathPool}>{pool}</Text>
+
+            {/* Counted score input (hidden when autoScores: bait + halfBaitIsWholeBait) */}
+            {showScoreInput && (
+              <View style={styles.mathInputRow}>
+                <Text style={styles.mathMinus}>−</Text>
+                <TextInput
+                  style={styles.mathInput}
+                  value={countedScoreStr}
+                  onChangeText={handleScoreChange}
+                  keyboardType="number-pad"
+                  placeholder="enter score"
+                  placeholderTextColor={Colors.grey}
+                  returnKeyType="done"
+                />
+              </View>
+            )}
+
+            {/* Derived other-team score — shown once a number is entered */}
+            {showScoreInput && countedScoreStr !== '' && (
+              <>
+                <View style={styles.mathAdditionLineWrap}>
+                  <View style={styles.mathAdditionLine} />
+                </View>
+                <Text style={styles.mathOther}>{otherScore}</Text>
+              </>
+            )}
+
+            {/* Auto-score note when halfBaitIsWholeBait */}
+            {autoScores && fullCountTeamLabel !== '' && (
+              <Text style={styles.autoScoreNote}>
+                {fullCountTeamLabel} gets{'\n'}full count: {pool}
+              </Text>
+            )}
+
+            {/* Warning: score > half count while bait is checked is contradictory */}
+            {showBaitWarning && (
+              <Text style={styles.baitWarning}>
+                Score exceeds half count — remove Bait?
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.mathPlaceholder}>Select who counted first</Text>
+        )}
+      </View>
+
+      {/* ── Section 4: bait branch — who went bait? (only when Bait is checked) ── */}
       {bait && (
-        <View style={styles.baitSection}>
-          <Text style={styles.baitSectionLabel}>who went bait?</Text>
+        <View style={styles.entrySectionBox}>
+          <Text style={styles.entrySectionHeader}>WHO WENT BAIT?</Text>
           <TouchableOpacity
             style={[styles.entryTeamBtn, baitTeamId === usTeamId && styles.entryTeamBtnActive]}
             onPress={() => setBaitTeamId(usTeamId)}
@@ -421,64 +476,6 @@ function ScratchMarginEntry({
             </Text>
           </TouchableOpacity>
         </View>
-      )}
-
-      <EntrySectionDivider />
-
-      {/* ── Section 3: THE SCORE ──────────────────────────────────────────── */}
-      <Text style={[styles.entrySectionHeader, theScoreDone && styles.entrySectionHeaderDone]}>
-        THE SCORE
-      </Text>
-
-      {countedTeamId ? (
-        <View style={styles.mathSection}>
-          <Text style={styles.mathLabel}>{countedLabel} counted:</Text>
-
-          {/* Count total — updates live as runs/bella/noTrump change */}
-          <Text style={styles.mathPool}>{pool}</Text>
-
-          {/* Counted score input (hidden when autoScores: bait + halfBaitIsWholeBait) */}
-          {showScoreInput && (
-            <View style={styles.mathInputRow}>
-              <Text style={styles.mathMinus}>−</Text>
-              <TextInput
-                style={styles.mathInput}
-                value={countedScoreStr}
-                onChangeText={handleScoreChange}
-                keyboardType="number-pad"
-                placeholder="enter score"
-                placeholderTextColor={Colors.grey}
-                returnKeyType="done"
-              />
-            </View>
-          )}
-
-          {/* Derived other-team score — shown once a number is entered */}
-          {showScoreInput && countedScoreStr !== '' && (
-            <>
-              <View style={styles.mathAdditionLineWrap}>
-                <View style={styles.mathAdditionLine} />
-              </View>
-              <Text style={styles.mathOther}>{otherScore}</Text>
-            </>
-          )}
-
-          {/* Auto-score note when halfBaitIsWholeBait */}
-          {autoScores && fullCountTeamLabel !== '' && (
-            <Text style={styles.autoScoreNote}>
-              {fullCountTeamLabel} gets{'\n'}full count: {pool}
-            </Text>
-          )}
-
-          {/* Warning: score > half count while bait is checked is contradictory */}
-          {showBaitWarning && (
-            <Text style={styles.baitWarning}>
-              Score exceeds half count — remove Bait?
-            </Text>
-          )}
-        </View>
-      ) : (
-        <Text style={styles.mathPlaceholder}>Select who counted first</Text>
       )}
 
       {/* ── Post button ───────────────────────────────────────────────────── */}
@@ -683,7 +680,7 @@ export default function LedgerScreen() {
 
             {/* ── RIGHT: Scratch margin ─────────────────────────────────── */}
             {/* Expands from flex:1 to flex:2 when entry form is open.
-                When collapsed: shows tag history + "+ Add Hand" tap target.
+                When collapsed: shows tag history + undo.
                 When expanded: shows the entry form. */}
             <View style={[styles.scratchMargin, marginOpen && styles.scratchMarginOpen]}>
               {marginOpen ? (
@@ -698,20 +695,11 @@ export default function LedgerScreen() {
                   onCancel={closeMargin}
                 />
               ) : (
-                // Collapsed state: tag history up top (future), + Add Hand / undo pinned to the bottom
+                // Collapsed state: tag history up top (future), undo pinned to the bottom
                 <View style={styles.marginCollapsed}>
                   <View />
 
                   <View style={styles.marginBottomStack}>
-                    {!gameOver && (
-                      <TouchableOpacity
-                        style={styles.marginAddHandLabel}
-                        onPress={openMargin}
-                        activeOpacity={0.7}>
-                        <Text style={styles.marginAddHandText}>+ Add Hand</Text>
-                      </TouchableOpacity>
-                    )}
-
                     {hands.length > 0 && (
                       confirmingUndo ? (
                         <View style={styles.undoAreaWrap}>
@@ -793,8 +781,15 @@ export default function LedgerScreen() {
         </View>
       )}
 
+      {/* ── Prominent "+ Add Hand" — opens the scratch margin entry form ── */}
+      {!gameOver && !marginOpen && (
+        <TouchableOpacity style={styles.addHandBottomBtn} onPress={openMargin} activeOpacity={0.8}>
+          <Text style={styles.addHandBottomBtnText}>+ Add Hand</Text>
+        </TouchableOpacity>
+      )}
+
       {/* ── Bottom action bar ────────────────────────────────────────────── */}
-      {/* "+ Add Hand" and Undo both live in the scratch margin now */}
+      {/* Undo lives in the scratch margin; "+ Add Hand" has a bottom-pinned button above */}
       <SafeAreaView style={styles.actionBar} edges={['bottom']}>
         <TouchableOpacity style={styles.endGameLink} onPress={handleEndGameEarly} activeOpacity={0.7}>
           <Text style={styles.endGameText}>End this game early</Text>
@@ -897,7 +892,7 @@ const styles = StyleSheet.create({
   },
   scratchMarginOpen: { flex: 2 },
 
-  // Collapsed margin: tag history (future) up top, + Add Hand / undo pinned to the bottom
+  // Collapsed margin: tag history (future) up top, undo pinned to the bottom
   marginCollapsed: {
     flex: 1,
     paddingTop: 8,
@@ -906,18 +901,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   marginBottomStack: { width: '100%' },
-  marginAddHandLabel: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  marginAddHandText: {
-    fontSize: 11,
-    color: Colors.green,
-    fontWeight: '600',
-  },
 
-  // "↺ undo" link and its inline confirmation — set well apart from
-  // "+ Add Hand" above so it isn't accidentally tapped.
+  // "↺ undo" link and its inline confirmation
   undoAreaWrap: { marginTop: 24, alignItems: 'center' },
   undoLinkText: { fontSize: 11, color: Colors.grey },
   undoConfirmQuestion: {
@@ -984,6 +969,21 @@ const styles = StyleSheet.create({
   endNightLink: { paddingVertical: 2 },
   endNightLinkText: { fontSize: 12, color: Colors.grey, textDecorationLine: 'underline' },
 
+  // Prominent bottom "+ Add Hand" button — primary-button style, same as
+  // "Let's Play!" and other primary CTAs elsewhere in the app.
+  addHandBottomBtn: {
+    backgroundColor: Colors.green,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  addHandBottomBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   // ── Bottom action bar ────────────────────────────────────────────────
   actionBar: {
     backgroundColor: Colors.cream,
@@ -1002,23 +1002,28 @@ const styles = StyleSheet.create({
   entryCancel: { alignSelf: 'flex-start', paddingVertical: 3, marginBottom: 4 },
   entryCancelText: { fontSize: 10, color: Colors.grey },
 
+  // Card-like box wrapping each of the four sections (WHO COUNTED, WHAT'S
+  // OUT, THE SCORE, and the bait branch) — the boxes themselves provide the
+  // separation, replacing the old divider lines.
+  entrySectionBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(180, 195, 210, 0.5)',
+    padding: 10,
+    marginBottom: 8,
+  },
+
   // Section headers: grey when incomplete, green when done
   entrySectionHeader: {
     fontSize: 9,
-    color: 'rgba(140, 140, 134, 0.6)',
+    color: Colors.grey,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: 6,
     fontWeight: '600',
   },
   entrySectionHeaderDone: { color: Colors.green },
-
-  // Thin divider between sections — same blue-grey as ruled lines
-  entrySectionDivider: {
-    height: 1,
-    backgroundColor: 'rgba(180, 195, 210, 0.6)',
-    marginVertical: 6,
-  },
 
   entryTeamBtn: {
     borderWidth: 1,
@@ -1062,14 +1067,6 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: Colors.green, borderColor: Colors.green },
   checkmark: { fontSize: 9, color: '#fff', lineHeight: 14 },
   checkLabel: { fontSize: 10, color: Colors.ink },
-
-  // Bait sub-section (nested inside WHAT'S OUT)
-  baitSection: { marginTop: 3 },
-  baitSectionLabel: {
-    fontSize: 9, color: Colors.grey,
-    textTransform: 'uppercase', letterSpacing: 0.5,
-    marginBottom: 3, marginTop: 4,
-  },
 
   // Math equation display
   mathSection: { marginTop: 4, alignItems: 'flex-end' },
