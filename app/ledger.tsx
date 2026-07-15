@@ -260,6 +260,32 @@ function ScratchMarginEntry({
   // Warning: claiming a score > half count while also marking bait is contradictory
   const showBaitWarning = bait && scoreEntered && parsedScore > pool / 2;
 
+  // ── Bait scoring (three scenarios) ────────────────────────────────────────
+  // A bait team forfeits to 0 no matter what; what the OTHER team is awarded
+  // depends on exactly how the bait landed:
+  //   Case A — bait team strictly under half the pool: other team gets the
+  //            FULL pool, regardless of the halfBaitIsWholeBait house rule.
+  //   Case B — bait team exactly at half the pool, halfBaitIsWholeBait ON:
+  //            "half bait is whole bait" — other team gets the FULL pool too.
+  //   Case C — bait team exactly at half the pool, halfBaitIsWholeBait OFF:
+  //            other team is capped at only what they actually counted —
+  //            the forfeited half is NOT awarded to anyone (total posted
+  //            for the hand is less than the full pool).
+  // Cases A and B are numerically identical (0 / full pool), which is why
+  // the score input can stay hidden whenever halfBaitIsWholeBait is on
+  // (autoScores below) — only Case C needs the real entered score.
+
+  // Bait team's actual score, regardless of which team physically did the
+  // counting — used to tell the three cases above apart.
+  const baitTeamScore = baitTeamId !== null
+    ? (baitTeamId === countedTeamId ? countedScore : otherScore)
+    : null;
+
+  // Case C flag — surfaced as an explicit note in the live math below.
+  const isExactHalfBaitCapped =
+    bait && baitTeamId !== null && scoreEntered &&
+    baitTeamScore === pool / 2 && !houseRules.halfBaitIsWholeBait;
+
   const canPost =
     countedTeamId !== null &&
     (!bait || baitTeamId !== null) &&
@@ -278,10 +304,16 @@ function ScratchMarginEntry({
     countedTeamId === usTeamId ? usLabel :
     countedTeamId === themTeamId ? themLabel : '';
 
-  // Which team gets the full count when halfBaitIsWholeBait
+  // Which team gets the full count when halfBaitIsWholeBait — also doubles
+  // as "the other (non-bait) team" label in the live bait math below.
   const fullCountTeamLabel =
     baitTeamId === usTeamId ? themLabel :
     baitTeamId === themTeamId ? usLabel : '';
+
+  // The bait team's own label, for the live bait math below.
+  const baitTeamLabel =
+    baitTeamId === usTeamId ? usLabel :
+    baitTeamId === themTeamId ? themLabel : '';
 
   function handleScoreChange(text: string) {
     // Only allow empty or non-negative integers that don't exceed the count
@@ -308,11 +340,23 @@ function ScratchMarginEntry({
 
     if (bait && baitTeamId) {
       if (houseRules.halfBaitIsWholeBait) {
+        // Cases A & B collapse: any bait ≤ half forfeits the whole pool.
+        usScore = baitIsUs ? 0 : pool;
+        themScore = baitIsUs ? pool : 0;
+      } else if (baitTeamScore !== null && baitTeamScore < pool / 2) {
+        // Case A — strictly under half still forfeits the FULL pool even
+        // though halfBaitIsWholeBait is off; that rule only softens the
+        // exact-half tie (Case C, below).
         usScore = baitIsUs ? 0 : pool;
         themScore = baitIsUs ? pool : 0;
       } else {
-        usScore = baitIsUs ? 0 : countedScore;
-        themScore = baitIsUs ? countedScore : 0;
+        // Case C (baitTeamScore === pool / 2) — and the safe fallback for a
+        // contradictory entry (bait team actually > half, which the UI
+        // already warns about): the other team is capped at what they
+        // actually counted rather than being awarded the full pool.
+        const otherTeamScore = pool - (baitTeamScore ?? 0);
+        usScore = baitIsUs ? 0 : otherTeamScore;
+        themScore = baitIsUs ? otherTeamScore : 0;
       }
     } else {
       usScore = countedIsUs ? countedScore : otherScore;
@@ -426,14 +470,29 @@ function ScratchMarginEntry({
               </View>
             )}
 
-            {/* Derived other-team score — shown once a number is entered */}
+            {/* Derived score — shown once a number is entered.
+                Plain hand: pool − counted score, shown as a subtraction.
+                Bait hand (score entered manually, halfBaitIsWholeBait off):
+                the award isn't a simple complement — see the three bait
+                cases above handlePost — so show the actual bait-team /
+                other-team split instead of the raw subtraction. */}
             {showScoreInput && countedScoreStr !== '' && (
-              <>
-                <View style={styles.mathAdditionLineWrap}>
-                  <View style={styles.mathAdditionLine} />
-                </View>
-                <Text style={styles.mathOther}>{otherScore}</Text>
-              </>
+              bait && baitTeamScore !== null ? (
+                <Text style={styles.autoScoreNote}>
+                  {baitTeamLabel}: 0{'\n'}
+                  {fullCountTeamLabel}: {baitTeamScore < pool / 2 ? pool : baitTeamScore}
+                  {isExactHalfBaitCapped && (
+                    <>{'\n'}Exactly half — capped at {baitTeamScore}, not the full {pool}</>
+                  )}
+                </Text>
+              ) : (
+                <>
+                  <View style={styles.mathAdditionLineWrap}>
+                    <View style={styles.mathAdditionLine} />
+                  </View>
+                  <Text style={styles.mathOther}>{otherScore}</Text>
+                </>
+              )
             )}
 
             {/* Auto-score note when halfBaitIsWholeBait */}
@@ -759,6 +818,13 @@ export default function LedgerScreen() {
         </LinedPaper>
       </ScrollView>
 
+      {/* Thin separator marking the boundary between the scrollable ledger
+          (Previous Games included) and the pinned bottom area below, so
+          "+ Add Hand" / "End this game early" read clearly as fixed controls
+          rather than more scroll content. Winner banner has its own gold
+          top border already, so skip this when it's showing instead. */}
+      {!gameOver && <View style={styles.pinnedAreaSeparator} />}
+
       {/* ── Winner banner (pinned above action bar) ─────────────────────── */}
       {gameOver && gameWinner && (
         <View style={styles.winnerBanner}>
@@ -968,6 +1034,12 @@ const styles = StyleSheet.create({
   nextGameBtnText: { fontSize: 14, color: Colors.green, fontWeight: '600' },
   endNightLink: { paddingVertical: 2 },
   endNightLinkText: { fontSize: 12, color: Colors.grey, textDecorationLine: 'underline' },
+
+  // Separates the scrollable ledger from the pinned bottom controls below it
+  pinnedAreaSeparator: {
+    height: 1,
+    backgroundColor: 'rgba(140, 140, 134, 0.3)',
+  },
 
   // Prominent bottom "+ Add Hand" button — primary-button style, same as
   // "Let's Play!" and other primary CTAs elsewhere in the app.
