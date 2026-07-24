@@ -78,6 +78,9 @@ type PlayersContextType = {
   // currentDealerIndex is an index into seating.seatOrder, wrapping clockwise.
   currentDealerIndex: number;
   advanceDealer: () => void;
+  // Records a passed hand for the current dealer and advances the deal —
+  // the one-call version of addHand({ passed: true, ... }) + advanceDealer().
+  passHand: () => void;
   gameWinner: 'us' | 'them' | null;
   // ── Game night state ─────────────────────────────────────────────────
   gameHistory: GameHistoryEntry[];
@@ -214,6 +217,21 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
     setCurrentDealerIndex(prev => (prev + 1) % len);
   }
 
+  // Records a passed hand for the current dealer, then advances the deal.
+  function passHand() {
+    const dealerId = seating?.seatOrder[currentDealerIndex] ?? '';
+    addHand({
+      dealerId,
+      passed: true,
+      usScore: 0,
+      themScore: 0,
+      tags: [],
+      countedTeamId: '',
+      baitTeamId: null,
+    });
+    advanceDealer();
+  }
+
   // Builds a GameHistoryEntry from the current hands/teams/seating and appends
   // it to gameHistory. Shared by startNextGame (winner already decided) and
   // endGameEarly (winner: null — nobody reached 500).
@@ -287,7 +305,7 @@ export function PlayersProvider({ children }: { children: ReactNode }) {
         setDealerId,
         houseRules, setHouseRules,
         hands, addHand, undoLastHand,
-        currentDealerIndex, advanceDealer,
+        currentDealerIndex, advanceDealer, passHand,
         gameWinner,
         gameHistory, startNextGame, endGameEarly,
         nightStartTime,
