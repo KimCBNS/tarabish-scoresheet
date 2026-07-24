@@ -66,7 +66,7 @@ export default function RulesScreen() {
 
   function handleStart() {
     setHouseRules(rules);
-    router.push('/ledger');
+    router.push('/(game)/hand');
   }
 
   return (
