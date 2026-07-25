@@ -34,6 +34,7 @@ export type Hand = {
   tags: HandTag[];
   countedTeamId: string;   // which team counted up — drives tag placement in the ledger display
   baitTeamId: string | null;
+  countedPlayerId?: string; // which individual player counted — for future history display, not used for scoring
 };
 
 // A completed (or early-ended) game, archived when "Start Next Game" or "End
