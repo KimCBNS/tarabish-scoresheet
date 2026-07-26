@@ -67,7 +67,7 @@ function YesNoToggle({
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function CurrentHandScreen() {
   const [fontsLoaded] = useFonts({ ArchitectsDaughter_400Regular });
-  const { players, teams, seating, houseRules, currentDealerIndex, addHand, advanceDealer, passHand } = usePlayers();
+  const { players, teams, seating, houseRules, currentDealerIndex, hands, addHand, advanceDealer, passHand } = usePlayers();
 
   // ── Local hand-entry state — nothing here touches context until POST.
   //    Reset to these defaults right after every post, ready for the next
@@ -203,6 +203,13 @@ export default function CurrentHandScreen() {
     setBaitTeamId(null);
     setEnteredScore('');
   }
+
+  // ── Bottom scoreboard ──────────────────────────────────────────────────
+  const lastHand = hands.length > 0 ? hands[hands.length - 1] : null;
+  const isWaiting = hands.length === 0;
+  const showDash = isWaiting || (lastHand?.passed ?? false);
+  const usTotal = hands.reduce((sum, h) => sum + h.usScore, 0);
+  const themTotal = hands.reduce((sum, h) => sum + h.themScore, 0);
 
   if (!fontsLoaded) {
     return <View style={styles.screen} />;
@@ -422,6 +429,31 @@ export default function CurrentHandScreen() {
         </View>
       </KeyboardSafeScrollView>
 
+      {/* ── Pinned bottom scoreboard — glance-only, always visible ───────── */}
+      <View style={styles.scoreboard}>
+        <View style={styles.scoreboardCol}>
+          <Text style={styles.scoreboardHeader}>US</Text>
+          <Text style={[styles.scoreboardDelta, showDash && styles.scoreboardMuted]}>
+            {showDash ? '—' : `+${lastHand!.usScore}`}
+          </Text>
+          <View style={styles.scoreboardDivider} />
+          <Text style={[styles.scoreboardTotal, isWaiting && styles.scoreboardMuted]}>
+            {isWaiting ? '—' : usTotal}
+          </Text>
+        </View>
+
+        <View style={styles.scoreboardCol}>
+          <Text style={styles.scoreboardHeader}>THEM</Text>
+          <Text style={[styles.scoreboardDelta, showDash && styles.scoreboardMuted]}>
+            {showDash ? '—' : `+${lastHand!.themScore}`}
+          </Text>
+          <View style={styles.scoreboardDivider} />
+          <Text style={[styles.scoreboardTotal, isWaiting && styles.scoreboardMuted]}>
+            {isWaiting ? '—' : themTotal}
+          </Text>
+        </View>
+      </View>
+
     </SafeAreaView>
   );
 }
@@ -602,4 +634,41 @@ const styles = StyleSheet.create({
   },
   postBtnDisabled: { backgroundColor: Colors.grey, opacity: 0.5 },
   postBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+
+  // ── Pinned bottom scoreboard ─────────────────────────────────────────
+  scoreboard: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(61, 92, 69, 0.05)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(180, 195, 210, 0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  scoreboardCol: { flex: 1, alignItems: 'center' },
+  scoreboardHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.ink,
+  },
+  scoreboardDelta: {
+    fontFamily: 'ArchitectsDaughter_400Regular',
+    fontSize: 12,
+    color: Colors.green,
+    marginTop: 2,
+  },
+  scoreboardDivider: {
+    height: 1,
+    width: 32,
+    backgroundColor: 'rgba(43, 43, 40, 0.2)',
+    marginVertical: 2,
+  },
+  scoreboardTotal: {
+    fontFamily: 'ArchitectsDaughter_400Regular',
+    fontSize: 23,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  scoreboardMuted: { color: Colors.grey },
 });
